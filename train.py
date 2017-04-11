@@ -99,6 +99,8 @@ if __name__ == "__main__":
       "log_device_placement", False,
       "Whether to write the device on which every op will run into the "
       "logs on startup.")
+  flags.DEFINE_bool("select_randomly", False,
+     "How to do the selection of features.")
 
 def validate_class_name(flag_value, category, modules, expected_superclass):
   """Checks that the given string matches a class of the expected type.
@@ -153,6 +155,8 @@ def get_input_data_tensors(reader,
   """
   logging.info("Using batch size of " + str(batch_size) + " for training.")
   with tf.name_scope("train_input"):
+    random_selection = 0
+    if FLAGS.select_randomly: random_selection = 2
     files = gfile.Glob(data_pattern)
     if not files:
       raise IOError("Unable to find training files. data_pattern='" +
@@ -161,7 +165,7 @@ def get_input_data_tensors(reader,
     filename_queue = tf.train.string_input_producer(
         files, num_epochs=num_epochs, shuffle=True)
     training_data = [
-        reader.prepare_reader(filename_queue) for _ in range(num_readers)
+        reader.prepare_reader(filename_queue, random_selection) for _ in range(num_readers)
     ]
 
     return tf.train.shuffle_batch_join(

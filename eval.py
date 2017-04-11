@@ -58,6 +58,8 @@ if __name__ == "__main__":
       "frame_level_models.py for the model definitions.")
   flags.DEFINE_integer("batch_size", 1024,
                        "How many examples to process per batch.")
+  flags.DEFINE_bool("select_randomly", False,
+                       "How to do the selection of features.")
   flags.DEFINE_string("label_loss", "CrossEntropyLoss",
                       "Loss computed on validation data")
 
@@ -96,6 +98,8 @@ def get_input_evaluation_tensors(reader,
   """
   logging.info("Using batch size of " + str(batch_size) + " for evaluation.")
   with tf.name_scope("eval_input"):
+    random_selection = 0
+    if FLAGS.select_randomly: random_selection = 1
     files = gfile.Glob(data_pattern)
     if not files:
       raise IOError("Unable to find the evaluation files.")
@@ -103,7 +107,7 @@ def get_input_evaluation_tensors(reader,
     filename_queue = tf.train.string_input_producer(
         files, shuffle=False, num_epochs=1)
     eval_data = [
-        reader.prepare_reader(filename_queue) for _ in range(num_readers)
+        reader.prepare_reader(filename_queue, random_selection=random_selection) for _ in range(num_readers)
     ]
     return tf.train.batch_join(
         eval_data,

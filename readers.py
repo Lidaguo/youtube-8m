@@ -16,6 +16,7 @@
 
 import tensorflow as tf
 import utils
+import random
 
 from tensorflow import logging
 def resize_axis(tensor, axis, new_size, fill_value=0):
@@ -91,11 +92,17 @@ class YT8MAggregatedFeatureReader(BaseReader):
     self.feature_sizes = feature_sizes
     self.feature_names = feature_names
 
-  def prepare_reader(self, filename_queue, batch_size=1024):
+  def prepare_reader(self, filename_queue, random_selection=0, batch_size=1024):
     """Creates a single reader thread for pre-aggregated YouTube 8M Examples.
 
     Args:
       filename_queue: A tensorflow queue of filename locations.
+      random_selection: An int detailing which kind of selection among features has to be done
+        0: normal -> all the features concatenated
+        1: the specified features with the non-specified put to zero (always): for evaluation
+        2: a random selection. 1/3 normal, 1/3 only audio (frames to zero) and 1/3 only frames (audio to zero)
+            (for training)
+        This implies the code slightly hardcoded (size of features) because it will NOT depend on the command line
 
     Returns:
       A tuple of video indexes, features, labels, and padding data.
@@ -104,9 +111,14 @@ class YT8MAggregatedFeatureReader(BaseReader):
     _, serialized_examples = reader.read_up_to(filename_queue, batch_size)
 
     tf.add_to_collection("serialized_examples", serialized_examples)
-    return self.prepare_serialized_examples(serialized_examples)
+    return self.prepare_serialized_examples(serialized_examples, random_selection)
 
   def prepare_serialized_examples(self, serialized_examples):
+    # hardcoded values
+    len_features_frames = 1024
+    len_features_audio = 128
+    name_frames = "mean_rgb"
+    name_audio = "mean_audio"
     # set the mapping from the fields to data types in the proto
     num_features = len(self.feature_names)
     assert num_features > 0, "self.feature_names is empty!"
@@ -116,16 +128,53 @@ class YT8MAggregatedFeatureReader(BaseReader):
 
     feature_map = {"video_id": tf.FixedLenFeature([], tf.string),
                    "labels": tf.VarLenFeature(tf.int64)}
-    for feature_index in range(num_features):
-      feature_map[self.feature_names[feature_index]] = tf.FixedLenFeature(
-          [self.feature_sizes[feature_index]], tf.float32)
 
-    features = tf.parse_example(serialized_examples, features=feature_map)
+    # Normal case, leave as it was
+    if serialized_examples == 0 | num_features>1:
+        for feature_index in range(num_features):
+          feature_map[self.feature_names[feature_index]] = tf.FixedLenFeature(
+              [self.feature_sizes[feature_index]], tf.float32)
 
-    labels = tf.sparse_to_indicator(features["labels"], self.num_classes)
-    labels.set_shape([None, self.num_classes])
-    concatenated_features = tf.concat([
-        features[feature_name] for feature_name in self.feature_names], 1)
+        features = tf.parse_example(serialized_examples, features=feature_map)
+
+        labels = tf.sparse_to_indicator(features["labels"], self.num_classes)
+        labels.set_shape([None, self.num_classes])
+        concatenated_features = tf.concat([
+            tf.zeros_like(features[feature_name]) for feature_name in self.feature_names], 1)
+
+    # Evaluation with only one of the two features
+    elif serialized_examples == 1:
+        feature_map[name_frames] = tf.FixedLenFeature([len_features_frames], tf.float32)
+        feature_map[name_audio] = tf.FixedLenFeature([len_features_audio], tf.float32)
+
+        features = tf.parse_example(serialized_examples, features=feature_map)
+
+        labels = tf.sparse_to_indicator(features["labels"], self.num_classes)
+        labels.set_shape([None, self.num_classes])
+
+        # In this point there is only 1 feature_name
+        if self.feature_names[1] == "mean_rgb":
+            concatenated_features = tf.concat([features["mean_rgb"],  tf.zeros_like(features["mean_audio"])], 1)
+        else:
+            concatenated_features = tf.concat([tf.zeros_like(features["mean_rgb"]), features["mean_audio"]], 1)
+
+    # Training with thirds
+    else:
+        feature_map[name_frames] = tf.FixedLenFeature([len_features_frames], tf.float32)
+        feature_map[name_audio] = tf.FixedLenFeature([len_features_audio], tf.float32)
+
+        features = tf.parse_example(serialized_examples, features=feature_map)
+
+        labels = tf.sparse_to_indicator(features["labels"], self.num_classes)
+        labels.set_shape([None, self.num_classes])
+
+        number = random.uniform(0, 3)
+        if number < 1: # Normal
+            concatenated_features = tf.concat([features["mean_audio"],  features["mean_rgb"]], 1)
+        elif number < 2: # Put audio to zero
+            concatenated_features = tf.concat([features["mean_rgb"], tf.zeros_like(features["mean_audio"])], 1)
+        else: # Put frames to zero
+            concatenated_features = tf.concat([tf.zeros_like(features["mean_rgb"]), features["mean_audio"]], 1)
 
     return features["video_id"], concatenated_features, labels, tf.ones([tf.shape(serialized_examples)[0]])
 
@@ -194,7 +243,8 @@ class YT8MFrameFeatureReader(BaseReader):
   def prepare_reader(self,
                      filename_queue,
                      max_quantized_value=2,
-                     min_quantized_value=-2):
+                     min_quantized_value=-2,
+                     random_selection=0):
     """Creates a single reader thread for YouTube8M SequenceExamples.
 
     Args:
