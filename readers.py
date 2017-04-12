@@ -17,6 +17,7 @@
 import tensorflow as tf
 import utils
 import random
+from tensorflow import logging
 
 from tensorflow import logging
 def resize_axis(tensor, axis, new_size, fill_value=0):
@@ -130,6 +131,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
 
     feature_map = {"video_id": tf.FixedLenFeature([], tf.string),
                    "labels": tf.VarLenFeature(tf.int64)}
+    logging.info("self.random_selection es " + str(self.random_selection))
 
     # Normal case, leave as it was
     if self.random_selection == 0 | num_features>1:
@@ -171,6 +173,8 @@ class YT8MAggregatedFeatureReader(BaseReader):
         labels.set_shape([None, self.num_classes])
 
         number = random.uniform(0, 3)
+        logging.info("El random number es" + str(number))
+
         if number < 1: # Normal
             concatenated_features = tf.concat([features["mean_audio"],  features["mean_rgb"]], 1)
         elif number < 2: # Put audio to zero
