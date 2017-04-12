@@ -151,6 +151,7 @@ def GetListOfFeatureNamesAndSizes(feature_names, feature_sizes):
   """
   list_of_feature_names = [
       feature_names.strip() for feature_names in feature_names.split(',')]
+  logging.info("Feature sizes help: %s", feature_sizes)
   list_of_feature_sizes = [
       int(feature_sizes) for feature_sizes in feature_sizes.split(',')]
   if len(list_of_feature_names) != len(list_of_feature_sizes):
