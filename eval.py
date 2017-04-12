@@ -98,8 +98,6 @@ def get_input_evaluation_tensors(reader,
   """
   logging.info("Using batch size of " + str(batch_size) + " for evaluation.")
   with tf.name_scope("eval_input"):
-    random_selection = 0
-    if FLAGS.select_randomly: random_selection = 1
     files = gfile.Glob(data_pattern)
     if not files:
       raise IOError("Unable to find the evaluation files.")
@@ -107,7 +105,7 @@ def get_input_evaluation_tensors(reader,
     filename_queue = tf.train.string_input_producer(
         files, shuffle=False, num_epochs=1)
     eval_data = [
-        reader.prepare_reader(filename_queue, random_selection=random_selection) for _ in range(num_readers)
+        reader.prepare_reader(filename_queue) for _ in range(num_readers)
     ]
     return tf.train.batch_join(
         eval_data,
@@ -280,13 +278,15 @@ def evaluate():
     # convert feature_names and feature_sizes to lists of values
     feature_names, feature_sizes = utils.GetListOfFeatureNamesAndSizes(
         FLAGS.feature_names, FLAGS.feature_sizes)
-
+    random_selection = 0
+    if FLAGS.select_randomly: random_selection = 1
     if FLAGS.frame_features:
       reader = readers.YT8MFrameFeatureReader(feature_names=feature_names,
                                               feature_sizes=feature_sizes)
     else:
       reader = readers.YT8MAggregatedFeatureReader(feature_names=feature_names,
-                                                   feature_sizes=feature_sizes)
+                                                   feature_sizes=feature_sizes,
+                                                   random_selection = random_selection)
 
     model = find_class_by_name(FLAGS.model,
         [frame_level_models, video_level_models])()

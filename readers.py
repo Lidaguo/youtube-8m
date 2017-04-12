@@ -75,7 +75,8 @@ class YT8MAggregatedFeatureReader(BaseReader):
   def __init__(self,
                num_classes=4716,
                feature_sizes=[1024],
-               feature_names=["mean_inc3"]):
+               feature_names=["mean_inc3"],
+               random_selection=0):
     """Construct a YT8MAggregatedFeatureReader.
 
     Args:
@@ -91,8 +92,9 @@ class YT8MAggregatedFeatureReader(BaseReader):
     self.num_classes = num_classes
     self.feature_sizes = feature_sizes
     self.feature_names = feature_names
+    self.random_selection = random_selection
 
-  def prepare_reader(self, filename_queue, random_selection=0, batch_size=1024):
+  def prepare_reader(self, filename_queue, batch_size=1024):
     """Creates a single reader thread for pre-aggregated YouTube 8M Examples.
 
     Args:
@@ -111,7 +113,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
     _, serialized_examples = reader.read_up_to(filename_queue, batch_size)
 
     tf.add_to_collection("serialized_examples", serialized_examples)
-    return self.prepare_serialized_examples(serialized_examples, random_selection)
+    return self.prepare_serialized_examples(serialized_examples)
 
   def prepare_serialized_examples(self, serialized_examples):
     # hardcoded values
@@ -130,7 +132,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
                    "labels": tf.VarLenFeature(tf.int64)}
 
     # Normal case, leave as it was
-    if serialized_examples == 0 | num_features>1:
+    if self.random_selection == 0 | num_features>1:
         for feature_index in range(num_features):
           feature_map[self.feature_names[feature_index]] = tf.FixedLenFeature(
               [self.feature_sizes[feature_index]], tf.float32)
@@ -143,7 +145,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
             tf.zeros_like(features[feature_name]) for feature_name in self.feature_names], 1)
 
     # Evaluation with only one of the two features
-    elif serialized_examples == 1:
+    elif self.random_selection == 1:
         feature_map[name_frames] = tf.FixedLenFeature([len_features_frames], tf.float32)
         feature_map[name_audio] = tf.FixedLenFeature([len_features_audio], tf.float32)
 

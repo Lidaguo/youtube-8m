@@ -155,8 +155,7 @@ def get_input_data_tensors(reader,
   """
   logging.info("Using batch size of " + str(batch_size) + " for training.")
   with tf.name_scope("train_input"):
-    random_selection = 0
-    if FLAGS.select_randomly: random_selection = 2
+
     files = gfile.Glob(data_pattern)
     if not files:
       raise IOError("Unable to find training files. data_pattern='" +
@@ -165,7 +164,7 @@ def get_input_data_tensors(reader,
     filename_queue = tf.train.string_input_producer(
         files, num_epochs=num_epochs, shuffle=True)
     training_data = [
-        reader.prepare_reader(filename_queue, random_selection) for _ in range(num_readers)
+        reader.prepare_reader(filename_queue) for _ in range(num_readers)
     ]
 
     return tf.train.shuffle_batch_join(
@@ -534,13 +533,14 @@ def get_reader():
   # Convert feature_names and feature_sizes to lists of values.
   feature_names, feature_sizes = utils.GetListOfFeatureNamesAndSizes(
       FLAGS.feature_names, FLAGS.feature_sizes)
-
+  random_selection = 0
+  if FLAGS.select_randomly: random_selection = 2
   if FLAGS.frame_features:
     reader = readers.YT8MFrameFeatureReader(
         feature_names=feature_names, feature_sizes=feature_sizes)
   else:
     reader = readers.YT8MAggregatedFeatureReader(
-        feature_names=feature_names, feature_sizes=feature_sizes)
+        feature_names=feature_names, feature_sizes=feature_sizes, random_selection=random_selection)
     
   return reader
 
