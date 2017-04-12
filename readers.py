@@ -134,7 +134,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
     logging.info("self.random_selection es " + str(self.random_selection))
 
     # Normal case, leave as it was
-    if self.random_selection == 0 | num_features>1:
+    if self.random_selection == 0 | (self.random_selection == 1 & num_features>1):
         for feature_index in range(num_features):
           feature_map[self.feature_names[feature_index]] = tf.FixedLenFeature(
               [self.feature_sizes[feature_index]], tf.float32)
@@ -144,7 +144,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
         labels = tf.sparse_to_indicator(features["labels"], self.num_classes)
         labels.set_shape([None, self.num_classes])
         concatenated_features = tf.concat([
-            tf.zeros_like(features[feature_name]) for feature_name in self.feature_names], 1)
+            features[feature_name] for feature_name in self.feature_names], 1)
 
     # Evaluation with only one of the two features
     elif self.random_selection == 1:
