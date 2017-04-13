@@ -16,10 +16,8 @@
 
 import tensorflow as tf
 import utils
-import random
 from tensorflow import logging
 
-from tensorflow import logging
 def resize_axis(tensor, axis, new_size, fill_value=0):
   """Truncates or pads a tensor to new_size on on a given axis.
 
@@ -117,11 +115,14 @@ class YT8MAggregatedFeatureReader(BaseReader):
     return self.prepare_serialized_examples(serialized_examples)
 
   def prepare_serialized_examples(self, serialized_examples):
+    logging.info("HOLAAAAAAAAAAAAAA ")
+
     # hardcoded values
     len_features_frames = 1024
     len_features_audio = 128
     name_frames = "mean_rgb"
     name_audio = "mean_audio"
+
     # set the mapping from the fields to data types in the proto
     num_features = len(self.feature_names)
     assert num_features > 0, "self.feature_names is empty!"
@@ -172,8 +173,8 @@ class YT8MAggregatedFeatureReader(BaseReader):
         labels = tf.sparse_to_indicator(features["labels"], self.num_classes)
         labels.set_shape([None, self.num_classes])
 
-        number = random.uniform(0, 3)
-        logging.info("El random number es" + str(number))
+        number = tf.random_uniform(shape=[], minval=0., maxval=3., dtype=tf.float32)
+        logging.info("El random number es " + str(number))
 
         if number < 1: # Normal
             concatenated_features = tf.concat([features["mean_audio"],  features["mean_rgb"]], 1)
