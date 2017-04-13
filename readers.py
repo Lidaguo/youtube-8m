@@ -176,9 +176,9 @@ class YT8MAggregatedFeatureReader(BaseReader):
         number = tf.random_uniform(shape=[], minval=0., maxval=3., dtype=tf.float32)
         logging.info("El random number es " + str(number))
 
-        if number < 1: # Normal
+        if tf.less(number, tf.constant(1.)): # Normal
             concatenated_features = tf.concat([features["mean_audio"],  features["mean_rgb"]], 1)
-        elif number < 2: # Put audio to zero
+        elif tf.less(number, tf.constant(2.)): # Put audio to zero
             concatenated_features = tf.concat([features["mean_rgb"], tf.zeros_like(features["mean_audio"])], 1)
         else: # Put frames to zero
             concatenated_features = tf.concat([tf.zeros_like(features["mean_rgb"]), features["mean_audio"]], 1)
