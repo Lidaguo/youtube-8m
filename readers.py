@@ -183,8 +183,8 @@ class YT8MAggregatedFeatureReader(BaseReader):
         number = tf.random_uniform([], minval=0, maxval=3, dtype=tf.float32, name="random_number")
         logging.info("El random number es " + str(number))
 
-        one = tf.constant(1)
-        two = tf.constant(2)
+        one = tf.constant(1.)
+        two = tf.constant(2.)
 
         def f1(): # Normal
             logging.info("I am in normal")
