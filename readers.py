@@ -17,6 +17,7 @@
 import tensorflow as tf
 import utils
 import random
+from tensorflow import logging
 
 def resize_axis(tensor, axis, new_size, fill_value=0):
   """Truncates or pads a tensor to new_size on on a given axis.
@@ -129,7 +130,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
 
     feature_map = {"video_id": tf.FixedLenFeature([], tf.string),
                    "labels": tf.VarLenFeature(tf.int64)}
-    print("self.random_selection es " + str(self.random_selection))
+    logging.info("self.random_selection es " + str(self.random_selection))
 
     # Normal case, leave as it was
     if self.random_selection == 0 | (self.random_selection == 1 & num_features>1):
@@ -170,18 +171,32 @@ class YT8MAggregatedFeatureReader(BaseReader):
         labels = tf.sparse_to_indicator(features["labels"], self.num_classes)
         labels.set_shape([None, self.num_classes])
 
-        number = random.uniform(0, 3)
-        print("El random number es " + str(number))
+        x = tf.constant(2)
+        y = tf.constant(5)
 
-        if number < 1: # Normal
-            print("I am in normal")
-            concatenated_features = tf.concat([features["mean_audio"],  features["mean_rgb"]], 1)
-        elif number < 2: # Put audio to zero
-            print("I am in audio zero")
-            concatenated_features = tf.concat([features["mean_rgb"], tf.zeros_like(features["mean_audio"])], 1)
-        else: # Put frames to zero
-            print("I am in frames zero")
-            concatenated_features = tf.concat([tf.zeros_like(features["mean_rgb"]), features["mean_audio"]], 1)
+        def f1():
+            return tf.multiply(x, 17)
+
+        def f2():
+            return tf.add(y, 23)
+
+        number = tf.random_uniform([], minval=0, maxval=3, dtype=tf.float32, name="random_number")
+        logging.info("El random number es " + str(number))
+
+        one = tf.constant(1)
+        two = tf.constant(2)
+
+        def f1(): # Normal
+            logging.info("I am in normal")
+            return tf.concat([features["mean_audio"],  features["mean_rgb"]], 1)
+        def f2(): # Put audio to zero
+            logging.info("I am in audio zero")
+            return tf.concat([features["mean_rgb"], tf.zeros_like(features["mean_audio"])], 1)
+        def f3():  # Put frames to zero
+            logging.info("I am in frames zero")
+            return tf.concat([tf.zeros_like(features["mean_rgb"]), features["mean_audio"]], 1)
+
+        concatenated_features = tf.case({tf.less(number, one): f1, tf.greater(number, two): f2}, default=f3, exclusive=True)
 
     return features["video_id"], concatenated_features, labels, tf.ones([tf.shape(serialized_examples)[0]])
 
