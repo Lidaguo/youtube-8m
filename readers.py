@@ -116,11 +116,13 @@ class YT8MAggregatedFeatureReader(BaseReader):
     return self.prepare_serialized_examples(serialized_examples)
 
   def prepare_serialized_examples(self, serialized_examples):
+
     # hardcoded values
     len_features_frames = 1024
     len_features_audio = 128
     name_frames = "mean_rgb"
     name_audio = "mean_audio"
+
     # set the mapping from the fields to data types in the proto
     num_features = len(self.feature_names)
     assert num_features > 0, "self.feature_names is empty!"
@@ -133,6 +135,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
     logging.info("self.random_selection es " + str(self.random_selection))
 
     # Normal case, leave as it was
+    # We can use python comparisons because they are checked only when creating the graph
     if self.random_selection == 0 | (self.random_selection == 1 & num_features>1):
         for feature_index in range(num_features):
           feature_map[self.feature_names[feature_index]] = tf.FixedLenFeature(
@@ -156,10 +159,11 @@ class YT8MAggregatedFeatureReader(BaseReader):
         labels.set_shape([None, self.num_classes])
 
         # In this point there is only 1 feature_name
-        if self.feature_names[1] == "mean_rgb":
-            concatenated_features = tf.concat([features["mean_rgb"],  tf.zeros_like(features["mean_audio"])], 1)
+        # We can use python comparisons because they are checked only when creating the graph
+        if self.feature_names[1] == name_frames:
+            concatenated_features = tf.concat([features[name_frames],  tf.zeros_like(features[name_audio])], 1)
         else:
-            concatenated_features = tf.concat([tf.zeros_like(features["mean_rgb"]), features["mean_audio"]], 1)
+            concatenated_features = tf.concat([tf.zeros_like(features[name_frames]), features[name_audio]], 1)
 
     # Training with thirds
     else:
@@ -170,35 +174,36 @@ class YT8MAggregatedFeatureReader(BaseReader):
 
         labels = tf.sparse_to_indicator(features["labels"], self.num_classes)
         labels.set_shape([None, self.num_classes])
-
-        x = tf.constant(2)
-        y = tf.constant(5)
-
-        def f1():
-            return tf.multiply(x, 17)
-
-        def f2():
-            return tf.add(y, 23)
-
         number = tf.random_uniform([], minval=0, maxval=3, dtype=tf.float32, name="random_number")
         logging.info("El random number es " + str(number))
+
+        features_rgb = features[name_frames]
+        features_audio = features[name_audio]
 
         one = tf.constant(1.)
         two = tf.constant(2.)
 
-        def f1(): # Normal
+        def f1():  # Normal
             logging.info("I am in normal")
-            return tf.concat([features["mean_audio"],  features["mean_rgb"]], 1)
-        def f2(): # Put audio to zero
+            return tf.constant(1)
+            # Nothing
+
+        def f2():  # Put audio to zero
             logging.info("I am in audio zero")
-            return tf.concat([features["mean_rgb"], tf.zeros_like(features["mean_audio"])], 1)
+            tf.clip_by_value(features[name_audio], 0, 0)
+            return tf.constant(2)
+
         def f3():  # Put frames to zero
             logging.info("I am in frames zero")
-            return tf.concat([tf.zeros_like(features["mean_rgb"]), features["mean_audio"]], 1)
+            tf.clip_by_value(features[name_frames], 0, 0)
+            return tf.constant(3)
 
-        concatenated_features = tf.case({tf.less(number, one): f1, tf.greater(number, two): f2}, default=f3, exclusive=True)
+        tf.case({tf.less(number, one): f1, tf.greater(number, two): f2}, default=f3, exclusive=True)
+
+        concatenated_features = tf.concat([features[name_frames], features[name_audio]], 1)
 
     return features["video_id"], concatenated_features, labels, tf.ones([tf.shape(serialized_examples)[0]])
+
 
 class YT8MFrameFeatureReader(BaseReader):
   """Reads TFRecords of SequenceExamples.
