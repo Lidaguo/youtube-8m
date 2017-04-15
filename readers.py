@@ -116,6 +116,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
     return self.prepare_serialized_examples(serialized_examples)
 
   def prepare_serialized_examples(self, serialized_examples):
+    logging.set_verbosity(tf.logging.DEBUG)
 
     # hardcoded values
     len_features_frames = 1024
@@ -132,7 +133,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
 
     feature_map = {"video_id": tf.FixedLenFeature([], tf.string),
                    "labels": tf.VarLenFeature(tf.int64)}
-    logging.info("self.random_selection es " + str(self.random_selection))
+    logging.debug("self.random_selection es " + str(self.random_selection))
 
     # Normal case, leave as it was
     # We can use python comparisons because they are checked only when creating the graph
@@ -183,24 +184,10 @@ class YT8MAggregatedFeatureReader(BaseReader):
         one = tf.constant(1.)
         two = tf.constant(2.)
 
-        def f1():  # Normal
-            logging.info("I am in normal")
-            return tf.constant(1)
-            # Nothing
+        tf.cond(tf.less(number, one), lambda: tf.clip_by_value(features_audio, 0, 0), lambda: tf.constant(0.0))
+        tf.cond(tf.greater(number, two), lambda: tf.clip_by_value(features_rgb, 0, 0), lambda: tf.constant(0.0))
 
-        def f2():  # Put audio to zero
-            logging.info("I am in audio zero")
-            tf.clip_by_value(features[name_audio], 0, 0)
-            return tf.constant(2)
-
-        def f3():  # Put frames to zero
-            logging.info("I am in frames zero")
-            tf.clip_by_value(features[name_frames], 0, 0)
-            return tf.constant(3)
-
-        tf.case({tf.less(number, one): f1, tf.greater(number, two): f2}, default=f3, exclusive=True)
-
-        concatenated_features = tf.concat([features[name_frames], features[name_audio]], 1)
+        concatenated_features = tf.concat([features_rgb, features_audio], 1, name="concat_features")
 
     return features["video_id"], concatenated_features, labels, tf.ones([tf.shape(serialized_examples)[0]])
 
