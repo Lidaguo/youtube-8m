@@ -156,7 +156,7 @@ def get_input_data_tensors(reader,
   logging.info("Using batch size of " + str(batch_size) + " for training.")
   with tf.name_scope("train_input"):
     logging.info(data_pattern)
-    files = gfile.Glob(data_pattern) #  ["/imatge/dsuris/documents/traindata/yt8m_video_level/train45.tfrecord"] #
+    files = file.Glob(data_pattern) # ["/imatge/dsuris/documents/traindata/yt8m_video_level/train45.tfrecord"] #
     if not files:
       raise IOError("Unable to find training files. data_pattern='" +
                     data_pattern + "'.")
@@ -164,7 +164,7 @@ def get_input_data_tensors(reader,
     filename_queue = tf.train.string_input_producer(
         files, num_epochs=num_epochs, shuffle=True)
     training_data = [
-        reader.prepare_reader(filename_queue) for _ in range(num_readers)
+        reader.prepare_reader(filename_queue, batch_size) for _ in range(num_readers)
     ]
 
     return tf.train.shuffle_batch_join(
@@ -302,7 +302,6 @@ def build_graph(reader,
     tf.add_to_collection("labels", tf.cast(labels_batch, tf.float32))
     tf.add_to_collection("train_op", train_op)
 
-
 class Trainer(object):
   """A Trainer to train a Tensorflow graph."""
 
@@ -362,6 +361,7 @@ class Trainer(object):
         predictions = tf.get_collection("predictions")[0]
         labels = tf.get_collection("labels")[0]
         train_op = tf.get_collection("train_op")[0]
+        raw = tf.get_collection("input_batch_raw")[0]
         init_op = tf.global_variables_initializer()
 
     sv = tf.train.Supervisor(
@@ -382,8 +382,8 @@ class Trainer(object):
         while (not sv.should_stop()) and (not self.max_steps_reached):
 
           batch_start_time = time.time()
-          _, global_step_val, loss_val, predictions_val, labels_val = sess.run(
-              [train_op, global_step, loss, predictions, labels])
+          _, global_step_val, loss_val, predictions_val, labels_val, raw_val = sess.run(
+              [train_op, global_step, loss, predictions, labels, raw])
           seconds_per_batch = time.time() - batch_start_time
 
           if self.max_steps and self.max_steps <= global_step_val:
@@ -397,11 +397,10 @@ class Trainer(object):
                 predictions_val, labels_val)
             gap = eval_util.calculate_gap(predictions_val, labels_val)
 
-            logging.info(
-                "%s: training step " + str(global_step_val) + "| Hit@1: " +
-                ("%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) + " GAP: " +
-                ("%.2f" % gap) + " Loss: " + str(loss_val),
-                task_as_string(self.task))
+            logging.info("%s Training step " + str(global_step_val) + " Rgb_is_zero: " + str(raw_val[0,0]==0) +
+                         " Audio_is_zero: " + str(raw_val[0,1100]==0) + "| Hit@1: " +
+                        ("%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) + " GAP: " +
+                        ("%.2f" % gap) + " Loss: " + str(loss_val), task_as_string(self.task))
 
             sv.summary_writer.add_summary(
                 utils.MakeSummary("model/Training_Hit@1", hit_at_one),

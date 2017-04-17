@@ -16,7 +16,7 @@
 
 import tensorflow as tf
 import utils
-import random
+from tensorflow.python.ops import io_ops
 from tensorflow import logging
 
 def resize_axis(tensor, axis, new_size, fill_value=0):
@@ -94,7 +94,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
     self.feature_names = feature_names
     self.random_selection = random_selection
 
-  def prepare_reader(self, filename_queue, batch_size=1024):
+  def prepare_reader(self, filename_queue, batch_size):
     """Creates a single reader thread for pre-aggregated YouTube 8M Examples.
 
     Args:
@@ -110,6 +110,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
       A tuple of video indexes, features, labels, and padding data.
     """
     reader = tf.TFRecordReader()
+    logging.info("Batch: " + str(batch_size))
     _, serialized_examples = reader.read_up_to(filename_queue, batch_size)
 
     tf.add_to_collection("serialized_examples", serialized_examples)
@@ -175,8 +176,9 @@ class YT8MAggregatedFeatureReader(BaseReader):
 
         labels = tf.sparse_to_indicator(features["labels"], self.num_classes)
         labels.set_shape([None, self.num_classes])
-        number = tf.random_uniform([], minval=0, maxval=3, dtype=tf.float32, name="random_number")
-        logging.info("El random number es " + str(number))
+        number = tf.random_uniform([], minval=0., maxval=3., dtype=tf.float32, name="random_number")
+        # logging.info("El random number es " + str(number))
+        # n_rand = tf.Print(number, [number], message="This is number: ")
 
         features_rgb = features[name_frames]
         features_audio = features[name_audio]
@@ -184,8 +186,14 @@ class YT8MAggregatedFeatureReader(BaseReader):
         one = tf.constant(1.)
         two = tf.constant(2.)
 
-        tf.cond(tf.less(number, one), lambda: tf.clip_by_value(features_audio, 0, 0), lambda: tf.constant(0.0))
-        tf.cond(tf.greater(number, two), lambda: tf.clip_by_value(features_rgb, 0, 0), lambda: tf.constant(0.0))
+        # save_op = io_ops._save(filename="/imatge/dsuris/documents/number.ckpt", tensor_names=["number"],
+        #                        tensors=[number])
+        # sess = tf.Session()
+        # sess.run(save_op)
+        # print(number.eval(session=sess))
+
+        features_audio = tf.cond(tf.less(number, one), lambda: tf.clip_by_value(features_audio, 0, 0), lambda: features_audio)
+        features_rgb = tf.cond(tf.greater(number, two), lambda: tf.clip_by_value(features_rgb, 0, 0), lambda: features_rgb)
 
         concatenated_features = tf.concat([features_rgb, features_audio], 1, name="concat_features")
 
