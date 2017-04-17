@@ -238,8 +238,8 @@ def build_graph(reader,
           num_readers=num_readers,
           num_epochs=num_epochs))
   tf.summary.histogram("model/input_raw", model_input_raw)
-  tf.summary.histogram("model/input_raw_audio", model_input_raw[1024:1024+128])
-  tf.summary.histogram("model/input_raw_frames", model_input_raw[0:1024])
+  tf.summary.histogram("model/input_raw_audio", model_input_raw[0,1024:1024+128])
+  tf.summary.histogram("model/input_raw_frames", model_input_raw[0,0:1024])
   
   feature_dim = len(model_input_raw.get_shape()) - 1
 
