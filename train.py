@@ -156,7 +156,7 @@ def get_input_data_tensors(reader,
   logging.info("Using batch size of " + str(batch_size) + " for training.")
   with tf.name_scope("train_input"):
     logging.info(data_pattern)
-    files = file.Glob(data_pattern) # ["/imatge/dsuris/documents/traindata/yt8m_video_level/train45.tfrecord"] #
+    files = gfile.Glob(data_pattern) # ["/imatge/dsuris/documents/traindata/yt8m_video_level/train45.tfrecord"] #
     if not files:
       raise IOError("Unable to find training files. data_pattern='" +
                     data_pattern + "'.")
