@@ -156,7 +156,7 @@ def get_input_data_tensors(reader,
   logging.info("Using batch size of " + str(batch_size) + " for training.")
   with tf.name_scope("train_input"):
     logging.info(data_pattern)
-    files = gfile.Glob(data_pattern) # ["/imatge/dsuris/documents/traindata/yt8m_video_level/train45.tfrecord"] #
+    files = gfile.Glob(data_pattern) #["/imatge/dsuris/documents/traindata/yt8m_video_level/train45.tfrecord"] #
     if not files:
       raise IOError("Unable to find training files. data_pattern='" +
                     data_pattern + "'.")
@@ -398,7 +398,7 @@ class Trainer(object):
             gap = eval_util.calculate_gap(predictions_val, labels_val)
 
             logging.info("%s Training step " + str(global_step_val) + " Rgb_is_zero: " + str(raw_val[0,0]==0) +
-                         " Audio_is_zero: " + str(raw_val[0,1100]==0) + "| Hit@1: " +
+                         " Audio_is_zero: " + str(raw_val[0,1025]==0) + "| Hit@1: " +
                         ("%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) + " GAP: " +
                         ("%.2f" % gap) + " Loss: " + str(loss_val), task_as_string(self.task))
 
