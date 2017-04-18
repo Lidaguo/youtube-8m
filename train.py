@@ -240,6 +240,9 @@ def build_graph(reader,
   tf.summary.histogram("model/input_raw", model_input_raw)
   tf.summary.histogram("model/input_raw_audio", model_input_raw[0,1024:1024+128])
   tf.summary.histogram("model/input_raw_frames", model_input_raw[0,0:1024])
+  tf.summary.scalar('audio_1024', model_input_raw[0,1024])
+  tf.summary.scalar('audio_1024+127', model_input_raw[0,1024+127])
+  tf.summary.scalar('audio_1024+100', model_input_raw[0, 1024 + 100])
   
   feature_dim = len(model_input_raw.get_shape()) - 1
 
@@ -398,7 +401,7 @@ class Trainer(object):
             gap = eval_util.calculate_gap(predictions_val, labels_val)
 
             logging.info("%s Training step " + str(global_step_val) + " Rgb_is_zero: " + str(raw_val[0,0]==0) +
-                         " Audio_is_zero: " + str(raw_val[0,1025]==0) + "| Hit@1: " +
+                         " Audio_is_zero: " + str(raw_val[0,1024:1024+128]) + "| Hit@1: " +
                         ("%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) + " GAP: " +
                         ("%.2f" % gap) + " Loss: " + str(loss_val), task_as_string(self.task))
 
