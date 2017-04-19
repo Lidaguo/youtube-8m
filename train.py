@@ -46,6 +46,10 @@ if __name__ == "__main__":
   flags.DEFINE_string("feature_names", "mean_rgb", "Name of the feature "
                       "to use for training.")
   flags.DEFINE_string("feature_sizes", "1024", "Length of the feature vectors.")
+  flags.DEFINE_bool(
+      "image_server", False,
+      "Si esta ficat a True vol dir que s'esta executant en el servidor del "
+      " d'imatge, si no, al google (predeterminat)")
 
   # Model flags.
   flags.DEFINE_bool(
@@ -156,7 +160,11 @@ def get_input_data_tensors(reader,
   logging.info("Using batch size of " + str(batch_size) + " for training.")
   with tf.name_scope("train_input"):
     logging.info(data_pattern)
-    files = gfile.Glob(data_pattern) #["/imatge/dsuris/documents/traindata/yt8m_video_level/train45.tfrecord"] #
+    if FLAGS.image_server:
+        files = ["/imatge/dsuris/documents/traindata/yt8m_video_level/train45.tfrecord"]
+    else:
+        files = gfile.Glob(data_pattern)
+
     if not files:
       raise IOError("Unable to find training files. data_pattern='" +
                     data_pattern + "'.")

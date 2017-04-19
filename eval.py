@@ -53,6 +53,10 @@ if __name__ == "__main__":
       "Otherwise, --eval_data_pattern must be aggregated video-level "
       "features. The model must also be set appropriately (i.e. to read 3D "
       "batches VS 4D batches.")
+  flags.DEFINE_bool(
+      "image_server", False,
+      "Si esta ficat a True vol dir que s'esta executant en el servidor del "
+      " d'imatge, si no, al google (predeterminat)")
   flags.DEFINE_string(
       "model", "LogisticModel",
       "Which architecture to use for the model. Options include 'Logistic', "
@@ -100,7 +104,10 @@ def get_input_evaluation_tensors(reader,
   """
   logging.info("Using batch size of " + str(batch_size) + " for evaluation.")
   with tf.name_scope("eval_input"):
-    files = ["/imatge/dsuris/documents/validationdata/yt8m_video_level"] # gfile.Glob(data_pattern) #
+    if FLAGS.image_server:
+        files = ["/imatge/dsuris/documents/traindata/yt8m_video_level/train45.tfrecord"]
+    else:
+        files = gfile.Glob(data_pattern)
 
     if not files:
       raise IOError("Unable to find the evaluation files.")
