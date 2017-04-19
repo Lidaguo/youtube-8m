@@ -364,7 +364,6 @@ class Trainer(object):
         predictions = tf.get_collection("predictions")[0]
         labels = tf.get_collection("labels")[0]
         train_op = tf.get_collection("train_op")[0]
-        raw = tf.get_collection("input_batch_raw")[0]
         init_op = tf.global_variables_initializer()
 
     sv = tf.train.Supervisor(
@@ -385,8 +384,8 @@ class Trainer(object):
         while (not sv.should_stop()) and (not self.max_steps_reached):
 
           batch_start_time = time.time()
-          _, global_step_val, loss_val, predictions_val, labels_val, raw_val = sess.run(
-              [train_op, global_step, loss, predictions, labels, raw])
+          _, global_step_val, loss_val, predictions_val, labels_val= sess.run(
+              [train_op, global_step, loss, predictions, labels])
           seconds_per_batch = time.time() - batch_start_time
 
           if self.max_steps and self.max_steps <= global_step_val:
@@ -400,8 +399,7 @@ class Trainer(object):
                 predictions_val, labels_val)
             gap = eval_util.calculate_gap(predictions_val, labels_val)
 
-            logging.info("%s Training step " + str(global_step_val) + " Rgb_is_zero: " + str(raw_val[0,0]==0) +
-                         " Audio_is_zero: " + str(raw_val[0,1024:1024+128]) + "| Hit@1: " +
+            logging.info("%s Training step " + str(global_step_val) + "| Hit@1: " +
                         ("%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) + " GAP: " +
                         ("%.2f" % gap) + " Loss: " + str(loss_val), task_as_string(self.task))
 

@@ -94,7 +94,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
     self.feature_names = feature_names
     self.random_selection = random_selection
 
-  def prepare_reader(self, filename_queue, batch_size):
+  def prepare_reader(self, filename_queue, batch_size=1024):
     """Creates a single reader thread for pre-aggregated YouTube 8M Examples.
 
     Args:
@@ -162,7 +162,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
 
         # In this point there is only 1 feature_name
         # We can use python comparisons because they are checked only when creating the graph
-        if self.feature_names[1] == name_frames:
+        if self.feature_names[0] == name_frames:
             concatenated_features = tf.concat([features[name_frames],  tf.zeros_like(features[name_audio])], 1)
         else:
             concatenated_features = tf.concat([tf.zeros_like(features[name_frames]), features[name_audio]], 1)
@@ -177,20 +177,12 @@ class YT8MAggregatedFeatureReader(BaseReader):
         labels = tf.sparse_to_indicator(features["labels"], self.num_classes)
         labels.set_shape([None, self.num_classes])
         number = tf.random_uniform([], minval=0., maxval=3., dtype=tf.float32, name="random_number")
-        # logging.info("El random number es " + str(number))
-        # n_rand = tf.Print(number, [number], message="This is number: ")
 
         features_rgb = features[name_frames]
         features_audio = features[name_audio]
 
         one = tf.constant(1.)
         two = tf.constant(2.)
-
-        # save_op = io_ops._save(filename="/imatge/dsuris/documents/number.ckpt", tensor_names=["number"],
-        #                        tensors=[number])
-        # sess = tf.Session()
-        # sess.run(save_op)
-        # print(number.eval(session=sess))
 
         features_audio = tf.cond(tf.less(number, one), lambda: tf.clip_by_value(features_audio, 0, 0), lambda: features_audio)
         features_rgb = tf.cond(tf.greater(number, two), lambda: tf.clip_by_value(features_rgb, 0, 0), lambda: features_rgb)

@@ -33,8 +33,10 @@ if __name__ == "__main__":
   # Dataset flags.
   flags.DEFINE_string("train_dir", "/tmp/yt8m_model/",
                       "The directory to load the model files from. "
-                      "The tensorboard metrics files are also saved to this "
-                      "directory.")
+                      "If board_dir is not specified, the tensorboard metrics "
+                      "files are also saved to this directory.")
+  flags.DEFINE_string("board_dir", "",
+                      "The directory to save the tensorboard metric files.")
   flags.DEFINE_string(
       "eval_data_pattern", "",
       "File glob defining the evaluation dataset in tensorflow.SequenceExample "
@@ -98,14 +100,15 @@ def get_input_evaluation_tensors(reader,
   """
   logging.info("Using batch size of " + str(batch_size) + " for evaluation.")
   with tf.name_scope("eval_input"):
-    files = gfile.Glob(data_pattern)
+    files = ["/imatge/dsuris/documents/validationdata/yt8m_video_level"] # gfile.Glob(data_pattern) #
+
     if not files:
       raise IOError("Unable to find the evaluation files.")
     logging.info("number of evaluation files: " + str(len(files)))
     filename_queue = tf.train.string_input_producer(
         files, shuffle=False, num_epochs=1)
     eval_data = [
-        reader.prepare_reader(filename_queue) for _ in range(num_readers)
+        reader.prepare_reader(filename_queue, batch_size) for _ in range(num_readers)
     ]
     return tf.train.batch_join(
         eval_data,
@@ -311,8 +314,11 @@ def evaluate():
     summary_op = tf.get_collection("summary_op")[0]
 
     saver = tf.train.Saver(tf.global_variables())
-    summary_writer = tf.summary.FileWriter(
-        FLAGS.train_dir, graph=tf.get_default_graph())
+    if FLAGS.board_dir is "":
+        board_dir = FLAGS.train_dir
+    else:
+        board_dir = FLAGS.board_dir
+    summary_writer = tf.summary.FileWriter(board_dir, graph=tf.get_default_graph())
 
     evl_metrics = eval_util.EvaluationMetrics(reader.num_classes, FLAGS.top_k)
 
