@@ -248,10 +248,7 @@ def build_graph(reader,
   tf.summary.histogram("model/input_raw", model_input_raw)
   tf.summary.histogram("model/input_raw_audio", model_input_raw[0,1024:1024+128])
   tf.summary.histogram("model/input_raw_frames", model_input_raw[0,0:1024])
-  tf.summary.scalar('audio_1024', model_input_raw[0,1024])
-  tf.summary.scalar('audio_1024+127', model_input_raw[0,1024+127])
-  tf.summary.scalar('audio_1024+100', model_input_raw[0, 1024 + 100])
-  
+
   feature_dim = len(model_input_raw.get_shape()) - 1
 
   model_input = tf.nn.l2_normalize(model_input_raw, feature_dim)
