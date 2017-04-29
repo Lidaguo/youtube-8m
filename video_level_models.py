@@ -65,7 +65,7 @@ class DidacModel(models.BaseModel):
     hid_2_audio = 128
     hid_1_frames = 1024
     hid_2_frames = 1024
-    hid = 500
+    hid = 128
 
     model_input_audio = model_input[:, 1024:1024+128]
     model_input_frames = model_input[:, 0:1024]
