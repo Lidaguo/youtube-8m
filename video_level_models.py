@@ -65,29 +65,29 @@ class DidacModel(models.BaseModel):
     hid_2_audio = 128
     hid_1_frames = 1024
     hid_2_frames = 1024
-    hid = 128+1024
+    hid = 500
 
     model_input_audio = model_input[:, 1024:1024+128]
     model_input_frames = model_input[:, 0:1024]
 
     first_audio = slim.fully_connected(
-        model_input_audio, hid_1_audio, activation_fn=tf.nn.sigmoid,
+        model_input_audio, hid_1_audio, activation_fn=tf.nn.relu,
         weights_regularizer=slim.l2_regularizer(l2_penalty))
 
     second_audio = slim.fully_connected(
-        first_audio, hid_2_audio, activation_fn=tf.nn.sigmoid,
+        first_audio, hid_2_audio, activation_fn=tf.nn.relu,
         weights_regularizer=slim.l2_regularizer(l2_penalty))
 
     first_frames = slim.fully_connected(
-        model_input_frames, hid_1_frames, activation_fn=tf.nn.sigmoid,
+        model_input_frames, hid_1_frames, activation_fn=tf.nn.relu,
         weights_regularizer=slim.l2_regularizer(l2_penalty))
 
     second_frames = slim.fully_connected(
-        first_frames, hid_2_frames, activation_fn=tf.nn.sigmoid,
+        first_frames, hid_2_frames, activation_fn=tf.nn.relu,
         weights_regularizer=slim.l2_regularizer(l2_penalty))
 
     hidden = slim.fully_connected(
-        tf.concat([second_frames, second_audio],1), hid, activation_fn=tf.nn.sigmoid,
+        tf.concat([second_frames, second_audio],1), hid, activation_fn=tf.nn.relu,
         weights_regularizer=slim.l2_regularizer(l2_penalty))
 
     output = slim.fully_connected(

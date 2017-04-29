@@ -161,7 +161,46 @@ def get_input_data_tensors(reader,
   with tf.name_scope("train_input"):
     logging.info(data_pattern)
     if FLAGS.image_server:
-        files = ["/imatge/dsuris/documents/traindata/yt8m_video_level/train45.tfrecord"]
+        files = ["/imatge/dsuris/documents/traindata/yt8m_video_level/train0_.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/train45.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/train4f.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/train4V.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/train5A.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/train5r.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/train6A.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/train6l.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/train8D.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainbX.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainCj.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainDh.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/traindw.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/traineA.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/traineC.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainEe.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainfQ.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainha.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainHA.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainhR.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainI0.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainI1.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainih.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainIU.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainjw.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainkr.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainkV.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainny.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainpX.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainr4.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainR4.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainrH.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainTb.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainUS.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainUY.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainVK.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainVK.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainw_.tfrecord",
+                 "/imatge/dsuris/documents/traindata/yt8m_video_level/trainZ6.tfrecord"]
+
     else:
         files = gfile.Glob(data_pattern)
 

@@ -105,7 +105,7 @@ def get_input_evaluation_tensors(reader,
   logging.info("Using batch size of " + str(batch_size) + " for evaluation.")
   with tf.name_scope("eval_input"):
     if FLAGS.image_server:
-        files = ["/imatge/dsuris/documents/traindata/yt8m_video_level/train45.tfrecord"]
+        files = ["/imatge/dsuris/documents/validationdata/yt8m_video_level/validate4r.tfrecord"]
     else:
         files = gfile.Glob(data_pattern)
 
@@ -201,8 +201,10 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
   """
 
   global_step_val = -1
+  logging.info("Hola1")
   with tf.Session() as sess:
-    latest_checkpoint = tf.train.latest_checkpoint(FLAGS.train_dir)
+    latest_checkpoint = tf.train.latest_checkpoint("/work/dsuris/results/youtube-8m/video_level_didac_model") #FLAGS.train_dir)
+    logging.info("Hola2")
     if latest_checkpoint:
       logging.info("Loading checkpoint for eval: " + latest_checkpoint)
       # Restores from checkpoint
@@ -328,7 +330,6 @@ def evaluate():
     summary_writer = tf.summary.FileWriter(board_dir, graph=tf.get_default_graph())
 
     evl_metrics = eval_util.EvaluationMetrics(reader.num_classes, FLAGS.top_k)
-
     last_global_step_val = -1
     while True:
       last_global_step_val = evaluation_loop(video_id_batch, prediction_batch,
