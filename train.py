@@ -31,9 +31,9 @@ from tensorflow import gfile
 from tensorflow import logging
 import utils
 
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+#import matplotlib
+#matplotlib.use('Agg')
+#import matplotlib.pyplot as plt
 
 import numpy as np
 
@@ -524,14 +524,14 @@ class Trainer(object):
             #logging.info("Only Frames Embedding: " + str(only_frames_embedding))
             #logging.info("Both Embedding: " + str(both_embedding))
             if FLAGS.image_server:
-                plt.stem(only_audio_embedding)
-                plt.savefig("only_audio_stem.png")
-                plt.cla()
-                plt.stem(only_frames_embedding)
-                plt.savefig("only_frames_stem.png")
-                plt.cla()
-                plt.stem(both_embedding)
-                plt.savefig("both_stem.png")
+                #plt.stem(only_audio_embedding)
+                #plt.savefig("only_audio_stem.png")
+                #plt.cla()
+                #plt.stem(only_frames_embedding)
+                #plt.savefig("only_frames_stem.png")
+                #plt.cla()
+                #plt.stem(both_embedding)
+                #plt.savefig("both_stem.png")
                 logging.info("Imatges guardades")
 
       except tf.errors.OutOfRangeError:
