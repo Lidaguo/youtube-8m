@@ -94,7 +94,7 @@ class DidacModel(models.BaseModel):
         hidden, vocab_size, activation_fn=tf.nn.sigmoid,
         weights_regularizer=slim.l2_regularizer(l2_penalty))
 
-    return {"predictions": output}
+    return {"predictions": output, "hidden_layer_activations": hidden}
 
 
 class MoeModel(models.BaseModel):

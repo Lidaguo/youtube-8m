@@ -31,6 +31,12 @@ from tensorflow import gfile
 from tensorflow import logging
 import utils
 
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+import numpy as np
+
 FLAGS = flags.FLAGS
 
 if __name__ == "__main__":
@@ -303,6 +309,10 @@ def build_graph(reader,
       tf.summary.histogram(variable.op.name, variable)
 
     predictions = result["predictions"]
+    # Only for DidacModel
+    if "hidden_layer_activations" in result.keys():
+        hidden_layer_activations = result["hidden_layer_activations"]
+        tf.add_to_collection("hidden_layer_activations", hidden_layer_activations)
     if "loss" in result.keys():
       label_loss = result["loss"]
     else:
@@ -408,7 +418,11 @@ class Trainer(object):
         predictions = tf.get_collection("predictions")[0]
         labels = tf.get_collection("labels")[0]
         train_op = tf.get_collection("train_op")[0]
+        input_batch_raw = tf.get_collection("input_batch_raw")[0]
         init_op = tf.global_variables_initializer()
+
+        if FLAGS.model == "DidacModel":
+            hidden_layer_activations = tf.get_collection("hidden_layer_activations")[0]
 
     sv = tf.train.Supervisor(
         graph,
@@ -425,11 +439,40 @@ class Trainer(object):
 
       try:
         logging.info("%s: Entering training loop.", task_as_string(self.task))
+
+        # Mida de la embedding layer. Ha de quadrar amb la del model. Ho puc posar com a flag i/o passar parametre
+        size_embedding = 128
+        count_only_audio = 0
+        count_only_frames = 0
+        count_both = 0
+        only_audio_embedding = np.zeros(size_embedding)
+        only_frames_embedding = np.zeros(size_embedding)
+        both_embedding = np.zeros(size_embedding)
+
         while (not sv.should_stop()) and (not self.max_steps_reached):
 
           batch_start_time = time.time()
-          _, global_step_val, loss_val, predictions_val, labels_val= sess.run(
-              [train_op, global_step, loss, predictions, labels])
+          if FLAGS.model == "DidacModel":
+              _, global_step_val, loss_val, predictions_val, labels_val, input_batch_raw_val, hidden_layer_val = sess.run(
+                  [train_op, global_step, loss, predictions, labels, input_batch_raw, hidden_layer_activations])
+              hidden_layer_val = np.mean(hidden_layer_val, axis=0) # Mean across all the batch examples
+          else:
+              _, global_step_val, loss_val, predictions_val, labels_val, input_batch_raw= sess.run(
+                  [train_op, global_step, loss, predictions, labels, input_batch_raw])
+          if FLAGS.model == "DidacModel":
+              # Only audio
+              if ((input_batch_raw_val[0,1] == 0) & (input_batch_raw_val[0,1025] != 0)):
+                  only_audio_embedding += hidden_layer_val
+                  count_only_audio += 1
+              # Both
+              if ((input_batch_raw_val[0, 1] != 0) & (input_batch_raw_val[0, 1025] != 0)):
+                  both_embedding += hidden_layer_val
+                  count_both += 1
+              # Only frames
+              if ((input_batch_raw_val[0, 1] != 0) & (input_batch_raw_val[0, 1025] == 0)):
+                  only_frames_embedding += hidden_layer_val;
+                  count_only_frames += 1
+
           seconds_per_batch = time.time() - batch_start_time
 
           if self.max_steps and self.max_steps <= global_step_val:
@@ -472,12 +515,32 @@ class Trainer(object):
         if self.is_master:
           self.export_model(global_step_val, sv.saver, sv.save_path, sess)
 
+        if FLAGS.model == "DidacModel":
+            only_audio_embedding = np.asarray(only_audio_embedding)/np.asarray(count_only_audio)
+            only_frames_embedding = np.asarray(only_frames_embedding) / np.asarray(count_only_frames)
+            both_embedding = np.asarray(both_embedding)/np.asarray(count_both)
+
+            #logging.info("Only Audio Embedding: " + str(only_audio_embedding))
+            #logging.info("Only Frames Embedding: " + str(only_frames_embedding))
+            #logging.info("Both Embedding: " + str(both_embedding))
+            if FLAGS.image_server:
+                plt.stem(only_audio_embedding)
+                plt.savefig("only_audio_stem.png")
+                plt.cla()
+                plt.stem(only_frames_embedding)
+                plt.savefig("only_frames_stem.png")
+                plt.cla()
+                plt.stem(both_embedding)
+                plt.savefig("both_stem.png")
+                logging.info("Imatges guardades")
+
       except tf.errors.OutOfRangeError:
         logging.info("%s: Done training -- epoch limit reached.",
                      task_as_string(self.task))
 
     logging.info("%s: Exited training loop.", task_as_string(self.task))
     sv.Stop()
+    print("Hem acabat")
 
   def export_model(self, global_step_val, saver, save_path, session):
 
