@@ -206,7 +206,7 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
     if FLAGS.image_server:
         latest_checkpoint = tf.train.latest_checkpoint("/work/dsuris/results/youtube-8m/video_level_didac_model")
     else:
-        latest_checkpoint = FLAGS.train_dir
+        latest_checkpoint = tf.train.latest_checkpoint(FLAGS.train_dir)
     logging.info("Hola2")
     if latest_checkpoint:
       logging.info("Loading checkpoint for eval: " + latest_checkpoint)
