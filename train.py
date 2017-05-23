@@ -31,9 +31,9 @@ from tensorflow import gfile
 from tensorflow import logging
 import utils
 
-#import matplotlib
-#matplotlib.use('Agg')
-#import matplotlib.pyplot as plt
+# import matplotlib
+# matplotlib.use('Agg')
+# import matplotlib.pyplot as plt
 
 import numpy as np
 
@@ -111,6 +111,10 @@ if __name__ == "__main__":
       "logs on startup.")
   flags.DEFINE_bool("select_randomly", False,
      "How to do the selection of features.")
+  flags.DEFINE_bool("negative_sampling", False,
+     "Use or not negative sampling.")
+  flags.DEFINE_float("reg_lambda", 0.003,
+                       "Regularization between the two losses.")
 
 def validate_class_name(flag_value, category, modules, expected_superclass):
   """Checks that the given string matches a class of the expected type.
@@ -165,7 +169,6 @@ def get_input_data_tensors(reader,
   """
   logging.info("Using batch size of " + str(batch_size) + " for training.")
   with tf.name_scope("train_input"):
-    logging.info(data_pattern)
     if FLAGS.image_server:
         files = ["/imatge/dsuris/documents/traindata/yt8m_video_level/train0_.tfrecord",
                  "/imatge/dsuris/documents/traindata/yt8m_video_level/train45.tfrecord",
@@ -283,7 +286,7 @@ def build_graph(reader,
   tf.summary.scalar('learning_rate', learning_rate)
 
   optimizer = optimizer_class(learning_rate)
-  unused_video_id, model_input_raw, labels_batch, num_frames = (
+  unused_video_id, model_input_raw, labels_batch, num_frames, is_negative, labels_audio_batch = (
       get_input_data_tensors(
           reader,
           train_data_pattern,
@@ -302,21 +305,24 @@ def build_graph(reader,
     result = model.create_model(
         model_input,
         num_frames=num_frames,
-        vocab_size=reader.num_classes,
-        labels=labels_batch)
+        vocab_size=reader.num_classes)
 
     for variable in slim.get_model_variables():
       tf.summary.histogram(variable.op.name, variable)
 
     predictions = result["predictions"]
-    # Only for DidacModel
+    # Only for DidacModel & DidacModelEmbedding
     if "hidden_layer_activations" in result.keys():
         hidden_layer_activations = result["hidden_layer_activations"]
         tf.add_to_collection("hidden_layer_activations", hidden_layer_activations)
+    else:
+        hidden_layer_activations = []
     if "loss" in result.keys():
       label_loss = result["loss"]
     else:
-      label_loss = label_loss_fn.calculate_loss(predictions, labels_batch)
+      label_loss = label_loss_fn.calculate_loss(predictions, labels_batch, labels_audio=labels_audio_batch, embeddings=hidden_layer_activations,
+                                                vocab_size=reader.num_classes, reg_lambda = FLAGS.reg_lambda,
+                                                is_negative=is_negative)
     tf.summary.scalar("label_loss", label_loss)
 
     if "regularization_loss" in result.keys():
@@ -421,7 +427,7 @@ class Trainer(object):
         input_batch_raw = tf.get_collection("input_batch_raw")[0]
         init_op = tf.global_variables_initializer()
 
-        if FLAGS.model == "DidacModel":
+        if (FLAGS.model == "DidacModel") | (FLAGS.model == "DidacModelEmbedding"):
             hidden_layer_activations = tf.get_collection("hidden_layer_activations")[0]
 
     sv = tf.train.Supervisor(
@@ -448,16 +454,19 @@ class Trainer(object):
         only_audio_embedding = np.zeros(size_embedding)
         only_frames_embedding = np.zeros(size_embedding)
         both_embedding = np.zeros(size_embedding)
-
+        batch_counter = 0
         while (not sv.should_stop()) and (not self.max_steps_reached):
-
+          batch_counter += 1
           batch_start_time = time.time()
-          if FLAGS.model == "DidacModel":
+          if (FLAGS.model == "DidacModel"):
               _, global_step_val, loss_val, predictions_val, labels_val, input_batch_raw_val, hidden_layer_val = sess.run(
                   [train_op, global_step, loss, predictions, labels, input_batch_raw, hidden_layer_activations])
               hidden_layer_val = np.mean(hidden_layer_val, axis=0) # Mean across all the batch examples
+          elif FLAGS.model == "DidacModelEmbedding":
+              _, global_step_val, loss_val, predictions_val, labels_val, input_batch_raw_val, embeddings = sess.run(
+                  [train_op, global_step, loss, predictions, labels, input_batch_raw, hidden_layer_activations])
           else:
-              _, global_step_val, loss_val, predictions_val, labels_val, input_batch_raw= sess.run(
+              _, global_step_val, loss_val, predictions_val, labels_val, input_batch_raw_val= sess.run(
                   [train_op, global_step, loss, predictions, labels, input_batch_raw])
           if FLAGS.model == "DidacModel":
               # Only audio
@@ -470,7 +479,7 @@ class Trainer(object):
                   count_both += 1
               # Only frames
               if ((input_batch_raw_val[0, 1] != 0) & (input_batch_raw_val[0, 1025] == 0)):
-                  only_frames_embedding += hidden_layer_val;
+                  only_frames_embedding += hidden_layer_val
                   count_only_frames += 1
 
           seconds_per_batch = time.time() - batch_start_time
@@ -480,6 +489,7 @@ class Trainer(object):
 
           if self.is_master:
             examples_per_second = labels_val.shape[0] / seconds_per_batch
+            predictions_val = predictions_val[:,0:4716]
             hit_at_one = eval_util.calculate_hit_at_one(predictions_val,
                                                         labels_val)
             perr = eval_util.calculate_precision_at_equal_recall_rate(
@@ -511,6 +521,23 @@ class Trainer(object):
               self.export_model(global_step_val, sv.saver, sv.save_path, sess)
               self.last_model_export_step = global_step_val
 
+          if FLAGS.model == "DidacModelEmbedding":
+
+            if FLAGS.image_server & (batch_counter == 9000):
+                pred_audio = np.asarray(predictions_val[1, 0:128])
+                pred_frames = np.asarray(predictions_val[1, 128:2 * 128])
+                # plt.bar(range(1, 129), pred_audio / np.linalg.norm(pred_audio))
+                # plt.savefig("embedding_audio2.png")
+                # plt.cla()
+                # plt.bar(range(1, 129), pred_frames / np.linalg.norm(pred_frames))
+                # plt.savefig("embedding_frames2.png")
+                # plt.cla()
+                # plt.bar(range(1, 129),
+                #         pred_frames / np.linalg.norm(pred_frames) - pred_audio / np.linalg.norm(pred_audio))
+                # plt.savefig("embedding_diferencia2.png")
+                # plt.cla()
+                # logging.info("Imatges guardades")
+
         # Exporting the final model
         if self.is_master:
           self.export_model(global_step_val, sv.saver, sv.save_path, sess)
@@ -533,6 +560,7 @@ class Trainer(object):
                 #plt.stem(both_embedding)
                 #plt.savefig("both_stem.png")
                 logging.info("Imatges guardades")
+
 
       except tf.errors.OutOfRangeError:
         logging.info("%s: Done training -- epoch limit reached.",
@@ -649,7 +677,8 @@ def get_reader():
         feature_names=feature_names, feature_sizes=feature_sizes)
   else:
     reader = readers.YT8MAggregatedFeatureReader(
-        feature_names=feature_names, feature_sizes=feature_sizes, random_selection=random_selection)
+        feature_names=feature_names, feature_sizes=feature_sizes, random_selection=random_selection,
+        negative_sampling=FLAGS.negative_sampling)
     
   return reader
 

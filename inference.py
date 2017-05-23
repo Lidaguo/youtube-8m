@@ -14,19 +14,15 @@
 
 """Binary for generating predictions over a set of videos."""
 
-import os
 import time
 
 import numpy
 import tensorflow as tf
-
 from tensorflow import app
 from tensorflow import flags
 from tensorflow import gfile
 from tensorflow import logging
 
-import eval_util
-import losses
 import readers
 import utils
 

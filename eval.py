@@ -25,6 +25,7 @@ from tensorflow import app
 from tensorflow import flags
 from tensorflow import gfile
 from tensorflow import logging
+import numpy as np
 import utils
 
 FLAGS = flags.FLAGS
@@ -145,7 +146,8 @@ def build_graph(reader,
   """
 
   global_step = tf.Variable(0, trainable=False, name="global_step")
-  video_id_batch, model_input_raw, labels_batch, num_frames = get_input_evaluation_tensors(  # pylint: disable=g-line-too-long
+  video_id_batch, model_input_raw, labels_batch, num_frames, is_negative, labels_audio_batch\
+      = get_input_evaluation_tensors(  # pylint: disable=g-line-too-long
       reader,
       eval_data_pattern,
       batch_size=batch_size,
@@ -165,10 +167,16 @@ def build_graph(reader,
                                 is_training=False)
     predictions = result["predictions"]
     tf.summary.histogram("model_activations", predictions)
+    hidden_layer_activations = []
+    if "hidden_layer_activations" in result.keys():
+        hidden_layer_activations = result["hidden_layer_activations"]
+        tf.add_to_collection("hidden_layer_activations", hidden_layer_activations)
     if "loss" in result.keys():
       label_loss = result["loss"]
     else:
-      label_loss = label_loss_fn.calculate_loss(predictions, labels_batch)
+      label_loss = label_loss_fn.calculate_loss(predictions, labels_batch, labels_batch, hidden_layer_activations, is_negative=is_negative)
+
+
 
   tf.add_to_collection("global_step", global_step)
   tf.add_to_collection("loss", label_loss)
@@ -179,10 +187,15 @@ def build_graph(reader,
   tf.add_to_collection("labels", tf.cast(labels_batch, tf.float32))
   tf.add_to_collection("summary_op", tf.summary.merge_all())
 
+  # Only for DidacModel & DidacModelEmbedding
+  if "hidden_layer_activations" in result.keys():
+      hidden_layer_activations = result["hidden_layer_activations"]
+      tf.add_to_collection("hidden_layer_activations", hidden_layer_activations)
+
 
 def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
                     summary_op, saver, summary_writer, evl_metrics,
-                    last_global_step_val):
+                    last_global_step_val, hidden_layer_batch):
   """Run the evaluation loop once.
 
   Args:
@@ -201,13 +214,11 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
   """
 
   global_step_val = -1
-  logging.info("Hola1")
   with tf.Session() as sess:
     if FLAGS.image_server:
-        latest_checkpoint = tf.train.latest_checkpoint("/work/dsuris/results/youtube-8m/video_level_didac_model")
+        latest_checkpoint = "/work/dsuris/results/youtube-8m/video_level_didac_model/model.ckpt-1"
     else:
         latest_checkpoint = tf.train.latest_checkpoint(FLAGS.train_dir)
-    logging.info("Hola2")
     if latest_checkpoint:
       logging.info("Loading checkpoint for eval: " + latest_checkpoint)
       # Restores from checkpoint
@@ -227,7 +238,7 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
     sess.run([tf.local_variables_initializer()])
 
     # Start the queue runners.
-    fetches = [video_id_batch, prediction_batch, label_batch, loss, summary_op]
+    fetches = [video_id_batch, prediction_batch, label_batch, loss, summary_op, hidden_layer_batch]
     coord = tf.train.Coordinator()
     try:
       threads = []
@@ -243,14 +254,14 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
       examples_processed = 0
       while not coord.should_stop():
         batch_start_time = time.time()
-        _, predictions_val, labels_val, loss_val, summary_val = sess.run(
+        video_id_batch_val, predictions_val, labels_val, loss_val, summary_val, hidden_layer_val = sess.run(
             fetches)
         seconds_per_batch = time.time() - batch_start_time
         example_per_second = labels_val.shape[0] / seconds_per_batch
         examples_processed += labels_val.shape[0]
 
         iteration_info_dict = evl_metrics.accumulate(predictions_val,
-                                                     labels_val, loss_val)
+                                                     labels_val, loss_val, hidden_layer_val)
         iteration_info_dict["examples_per_second"] = example_per_second
 
         iterinfo = utils.AddGlobalStepSummary(
@@ -284,7 +295,7 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
     coord.request_stop()
     coord.join(threads, stop_grace_period_secs=10)
 
-    return global_step_val
+    return global_step_val, video_id_batch_val
 
 
 def evaluate():
@@ -325,20 +336,26 @@ def evaluate():
     loss = tf.get_collection("loss")[0]
     summary_op = tf.get_collection("summary_op")[0]
 
+    if (FLAGS.model == "DidacModel") | (FLAGS.model == "DidacModelEmbedding"):
+        hidden_layer_batch = tf.get_collection("hidden_layer_activations")[0]
+
     saver = tf.train.Saver(tf.global_variables())
     if FLAGS.board_dir is "":
         board_dir = FLAGS.train_dir
     else:
         board_dir = FLAGS.board_dir
     summary_writer = tf.summary.FileWriter(board_dir, graph=tf.get_default_graph())
-
     evl_metrics = eval_util.EvaluationMetrics(reader.num_classes, FLAGS.top_k)
     last_global_step_val = -1
     while True:
-      last_global_step_val = evaluation_loop(video_id_batch, prediction_batch,
+      last_global_step_val, video_id_batch_val\
+          = evaluation_loop(video_id_batch, prediction_batch,
                                              label_batch, loss, summary_op,
                                              saver, summary_writer, evl_metrics,
-                                             last_global_step_val)
+                                             last_global_step_val, hidden_layer_batch)
+      video_id_batch_array = np.asarray(video_id_batch_val)
+      logging.info("Mida video_id: " + str(video_id_batch_array.shape))
+      logging.info(video_id_batch_val[0])
       if FLAGS.run_once:
         break
 
