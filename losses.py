@@ -57,7 +57,7 @@ class CosineAndCrossEntropyLoss(BaseLoss):
     """
 
     def calculate_loss(self, predictions, labels, labels_audio, embeddings=[], vocab_size=4716, reg_lambda=0.003,
-                       is_negative=[], **unused_params):
+                       margin=0.3,is_negative=[], **unused_params):
         with tf.name_scope("loss_cosine_entropy"):
             is_negative_float = tf.to_float(is_negative)
 
@@ -91,7 +91,7 @@ class CosineAndCrossEntropyLoss(BaseLoss):
 
             # Loss for the negative samples. We do not take into account the prediction loss in this case
             # The margin is not to focus too much on the negative samples
-            margin = 0
+
 
             #embedding_audio = math_ops.to_float(embedding_audio)
             #embedding_frames = math_ops.to_float(embedding_frames)
@@ -101,9 +101,7 @@ class CosineAndCrossEntropyLoss(BaseLoss):
             cosine_distance = tf.reduce_sum(radial_diffs, 1, keep_dims=True) # The samples in the batch are separated
             cosine_distance_reversed = 1 - cosine_distance
 
-            negative_loss = tf.maximum(tf.constant(0.),reg_lambda*(cosine_distance - margin))  + \
-                                                 cross_entropy_loss
-            cosine_loss = tf.multiply(is_negative_float, tf.maximum(tf.constant(0.), cosine_distance - margin)) + \
+            cosine_loss = tf.multiply(is_negative_float, 1/(1-margin)*tf.maximum(tf.constant(0.), cosine_distance - margin)) + \
                           tf.multiply(1-is_negative_float, cosine_distance_reversed)
 
             cosine_loss_mean = tf.reduce_mean(cosine_loss)

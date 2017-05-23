@@ -80,7 +80,8 @@ class YT8MAggregatedFeatureReader(BaseReader):
                  feature_sizes=[1024],
                  feature_names=["mean_inc3"],
                  random_selection=0,
-                 negative_sampling=False):
+                 negative_sampling=False,
+                 percentage_negative=0.8):
         """Construct a YT8MAggregatedFeatureReader.
 
         Args:
@@ -98,6 +99,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
         self.feature_names = feature_names
         self.random_selection = random_selection
         self.negative_sampling = negative_sampling
+        self.percentage_negative = percentage_negative
 
     def prepare_reader(self, filename_queue, batch_size=1024):
         """Creates a single reader thread for pre-aggregated YouTube 8M Examples.
@@ -167,7 +169,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
             number_neg_sample = tf.random_uniform([]
                                                   , minval=0., maxval=1., dtype=tf.float32,
                                                   name="random_number_neg_sample")
-            constant = tf.constant(0.8)
+            constant = tf.constant(self.percentage_negative)
             batch_size = tf.shape(features_rgb)[0]
             logging.info("-----------------")
             logging.info(batch_size)

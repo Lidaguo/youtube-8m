@@ -115,6 +115,10 @@ if __name__ == "__main__":
      "Use or not negative sampling.")
   flags.DEFINE_float("reg_lambda", 0.003,
                        "Regularization between the two losses.")
+  flags.DEFINE_float("margin", 0.3,
+                       "Not to take into account the negative samples too much")
+  flags.DEFINE_float("percentage_negative", 0.8,
+                       "Percentage of negative samples")
 
 def validate_class_name(flag_value, category, modules, expected_superclass):
   """Checks that the given string matches a class of the expected type.
@@ -321,7 +325,7 @@ def build_graph(reader,
       label_loss = result["loss"]
     else:
       label_loss = label_loss_fn.calculate_loss(predictions, labels_batch, labels_audio=labels_audio_batch, embeddings=hidden_layer_activations,
-                                                vocab_size=reader.num_classes, reg_lambda = FLAGS.reg_lambda,
+                                                vocab_size=reader.num_classes, reg_lambda = FLAGS.reg_lambda, margin = FLAGS.margin,
                                                 is_negative=is_negative)
     tf.summary.scalar("label_loss", label_loss)
 
@@ -678,7 +682,7 @@ def get_reader():
   else:
     reader = readers.YT8MAggregatedFeatureReader(
         feature_names=feature_names, feature_sizes=feature_sizes, random_selection=random_selection,
-        negative_sampling=FLAGS.negative_sampling)
+        negative_sampling=FLAGS.negative_sampling, percentage_negative=FLAGS.percentage_negative)
     
   return reader
 
