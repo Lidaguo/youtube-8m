@@ -56,7 +56,7 @@ class CosineAndCrossEntropyLoss(BaseLoss):
     """Calculate the cosine distance loss between the predictions and labels.
     """
 
-    def calculate_loss(self, predictions, labels, labels_audio, embeddings=[], vocab_size=4716, reg_lambda=0.003,
+    def calculate_loss(self, predictions, labels, labels_audio, embeddings=[], vocab_size=4716, reg_lambda=0.00,
                        margin=0.3,is_negative=[], **unused_params):
         with tf.name_scope("loss_cosine_entropy"):
             is_negative_float = tf.to_float(is_negative)

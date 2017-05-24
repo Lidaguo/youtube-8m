@@ -124,6 +124,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
         return self.prepare_serialized_examples(serialized_examples)
 
     def prepare_serialized_examples(self, serialized_examples):
+
         logging.set_verbosity(tf.logging.DEBUG)
 
         # hardcoded values
@@ -146,18 +147,21 @@ class YT8MAggregatedFeatureReader(BaseReader):
         zeros_float = tf.zeros([tf.shape(serialized_examples)[0]])
         # Manera cutre de crear un vector de False. Alguna altra manera ha d'haver-hi
         is_negative = tf.not_equal(zeros_float, zeros_float)
+
+        for feature_index in range(num_features):
+            feature_map[self.feature_names[feature_index]] = tf.FixedLenFeature(
+                [self.feature_sizes[feature_index]], tf.float32)
+
         features = tf.parse_example(serialized_examples, features=feature_map)
+        features_rgb = features[name_frames]
+        features_audio = features[name_audio]
+
         labels_audio = tf.sparse_to_indicator(features["labels"], self.num_classes)
 
+        batch_size = tf.shape(features[name_frames])[0]
+        resta = tf.ones([batch_size,1])
+
         if self.negative_sampling:
-            for feature_index in range(num_features):
-                feature_map[self.feature_names[feature_index]] = tf.FixedLenFeature(
-                    [self.feature_sizes[feature_index]], tf.float32)
-
-            features = tf.parse_example(serialized_examples, features=feature_map)
-
-            features_rgb = features[name_frames]
-            features_audio = features[name_audio]
 
             labels = tf.sparse_to_indicator(features["labels"], self.num_classes)
             labels.set_shape([None, self.num_classes])
@@ -175,12 +179,11 @@ class YT8MAggregatedFeatureReader(BaseReader):
             logging.info(batch_size)
             is_negative = tf.random_uniform([batch_size,1] , minval=0, maxval=1)
             is_negative = tf.less(is_negative, constant)
-            features_audio, labels_audio = self.sample_negatively(features, labels, is_negative)
-
-            concatenated_features = tf.concat([ features_rgb, features_audio],1)
+            features_audio_return, labels_audio = self.sample_negatively(features, labels, is_negative)
+            resta = tf.equal(labels_audio, labels)
+            concatenated_features = tf.concat([ features_rgb, features_audio_return],1)
 
         else:
-
             # Normal case, leave as it was
             # We can use python comparisons because they are checked only when creating the graph
             if self.random_selection == 0 | (self.random_selection == 1 & num_features > 1):
@@ -238,7 +241,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
                 concatenated_features = tf.concat([features_rgb, features_audio], 1, name="concat_features")
 
         return features["video_id"], concatenated_features, labels, tf.ones(
-            [tf.shape(serialized_examples)[0]]), is_negative, labels_audio
+            [tf.shape(serialized_examples)[0]]), is_negative, labels_audio, resta
 
     def sample_negatively(self, features, labels, is_negative):
         features_audio = features["mean_audio"]

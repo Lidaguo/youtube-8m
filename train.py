@@ -30,6 +30,7 @@ from tensorflow import flags
 from tensorflow import gfile
 from tensorflow import logging
 import utils
+import numpy
 
 # import matplotlib
 # matplotlib.use('Agg')
@@ -290,7 +291,7 @@ def build_graph(reader,
   tf.summary.scalar('learning_rate', learning_rate)
 
   optimizer = optimizer_class(learning_rate)
-  unused_video_id, model_input_raw, labels_batch, num_frames, is_negative, labels_audio_batch = (
+  unused_video_id, model_input_raw, labels_batch, num_frames, is_negative, labels_audio_batch, resta = (
       get_input_data_tensors(
           reader,
           train_data_pattern,
@@ -361,6 +362,7 @@ def build_graph(reader,
         clip_gradient_norm=clip_gradient_norm)
 
     tf.add_to_collection("global_step", global_step)
+    tf.add_to_collection("is_negative", is_negative)
     tf.add_to_collection("loss", label_loss)
     tf.add_to_collection("predictions", predictions)
     tf.add_to_collection("input_batch_raw", model_input_raw)
@@ -368,6 +370,7 @@ def build_graph(reader,
     tf.add_to_collection("num_frames", num_frames)
     tf.add_to_collection("labels", tf.cast(labels_batch, tf.float32))
     tf.add_to_collection("train_op", train_op)
+    tf.add_to_collection("resta", resta)
 
 class Trainer(object):
   """A Trainer to train a Tensorflow graph."""
@@ -429,6 +432,8 @@ class Trainer(object):
         labels = tf.get_collection("labels")[0]
         train_op = tf.get_collection("train_op")[0]
         input_batch_raw = tf.get_collection("input_batch_raw")[0]
+        resta = tf.get_collection("resta")[0]
+        is_neg = tf.get_collection("is_negative")[0]
         init_op = tf.global_variables_initializer()
 
         if (FLAGS.model == "DidacModel") | (FLAGS.model == "DidacModelEmbedding"):
@@ -467,8 +472,8 @@ class Trainer(object):
                   [train_op, global_step, loss, predictions, labels, input_batch_raw, hidden_layer_activations])
               hidden_layer_val = np.mean(hidden_layer_val, axis=0) # Mean across all the batch examples
           elif FLAGS.model == "DidacModelEmbedding":
-              _, global_step_val, loss_val, predictions_val, labels_val, input_batch_raw_val, embeddings = sess.run(
-                  [train_op, global_step, loss, predictions, labels, input_batch_raw, hidden_layer_activations])
+              _, global_step_val, loss_val, predictions_val, labels_val, input_batch_raw_val, embeddings, resta_val, is_neg_val = sess.run(
+                  [train_op, global_step, loss, predictions, labels, input_batch_raw, hidden_layer_activations, resta, is_neg])
           else:
               _, global_step_val, loss_val, predictions_val, labels_val, input_batch_raw_val= sess.run(
                   [train_op, global_step, loss, predictions, labels, input_batch_raw])
@@ -500,7 +505,12 @@ class Trainer(object):
                 predictions_val, labels_val)
             gap = eval_util.calculate_gap(predictions_val, labels_val)
 
-            logging.info("%s Training step " + str(global_step_val) + "| Hit@1: " +
+            error = numpy.mean(numpy.mean(numpy.abs(embeddings[1,0:128] - embeddings[2,128:2*128])))
+            logging.info("*******************")
+            if FLAGS.model == "DidacModelEmbedding":
+                logging.info(is_neg_val[1])
+            logging.info(numpy.sum(numpy.multiply(embeddings[1,0:128], embeddings[1,128:2*128])))
+            logging.info("%s Training step " + str(error) + "| Hit@1: " +
                         ("%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) + " GAP: " +
                         ("%.2f" % gap) + " Loss: " + str(loss_val), task_as_string(self.task))
 

@@ -28,6 +28,7 @@ from tensorflow import logging
 import numpy as np
 import utils
 
+
 FLAGS = flags.FLAGS
 
 if __name__ == "__main__":
@@ -146,7 +147,7 @@ def build_graph(reader,
   """
 
   global_step = tf.Variable(0, trainable=False, name="global_step")
-  video_id_batch, model_input_raw, labels_batch, num_frames, is_negative, labels_audio_batch\
+  video_id_batch, model_input_raw, labels_batch, num_frames, is_negative, labels_audio_batch, _\
       = get_input_evaluation_tensors(  # pylint: disable=g-line-too-long
       reader,
       eval_data_pattern,
@@ -215,10 +216,10 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
 
   global_step_val = -1
   with tf.Session() as sess:
-    if FLAGS.image_server:
-        latest_checkpoint = "/work/dsuris/results/youtube-8m/video_level_didac_model/model.ckpt-1"
-    else:
-        latest_checkpoint = tf.train.latest_checkpoint(FLAGS.train_dir)
+    #if FLAGS.image_server:
+    #    latest_checkpoint = "/work/dsuris/results/youtube-8m/video_level_didac_model/model.ckpt-1"
+    #else:
+    latest_checkpoint = tf.train.latest_checkpoint(FLAGS.train_dir)
     if latest_checkpoint:
       logging.info("Loading checkpoint for eval: " + latest_checkpoint)
       # Restores from checkpoint
@@ -256,6 +257,12 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
         batch_start_time = time.time()
         video_id_batch_val, predictions_val, labels_val, loss_val, summary_val, hidden_layer_val = sess.run(
             fetches)
+
+        emb_frames = hidden_layer_val[1,0:128]
+        emb_audio = hidden_layer_val[1, 128:2*128]
+        logging.info("************")
+        logging.info(np.sum(np.multiply(emb_frames,emb_audio)))
+
         seconds_per_batch = time.time() - batch_start_time
         example_per_second = labels_val.shape[0] / seconds_per_batch
         examples_processed += labels_val.shape[0]
