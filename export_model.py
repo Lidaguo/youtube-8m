@@ -89,7 +89,7 @@ class ModelExporter(object):
 
   def build_prediction_graph(self, serialized_examples):    
 
-    video_id, model_input_raw, labels_batch, num_frames, is_negative, _ = (
+    video_id, model_input_raw, labels_batch, num_frames, is_negative, _, _ = (
         self.reader.prepare_serialized_examples(serialized_examples))
 
     feature_dim = len(model_input_raw.get_shape()) - 1
