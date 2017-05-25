@@ -77,6 +77,8 @@ if __name__ == "__main__":
   flags.DEFINE_boolean("run_once", False, "Whether to run eval only once.")
   flags.DEFINE_integer("top_k", 20, "How many predictions to output per video.")
 
+  flags.DEFINE_integer("hits", 5, "Hit@k -> hits is the k.")
+
 
 def find_class_by_name(name, modules):
   """Searches the provided modules for the named class and returns it."""
@@ -258,8 +260,8 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
         video_id_batch_val, predictions_val, labels_val, loss_val, summary_val, hidden_layer_val = sess.run(
             fetches)
 
-        emb_frames = hidden_layer_val[1,0:128]
-        emb_audio = hidden_layer_val[1, 128:2*128]
+        emb_frames = hidden_layer_val[0,0:128]
+        emb_audio = hidden_layer_val[0, 128:2*128]
         logging.info("************")
         logging.info(np.sum(np.multiply(emb_frames,emb_audio)))
 
@@ -268,7 +270,7 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
         examples_processed += labels_val.shape[0]
 
         iteration_info_dict = evl_metrics.accumulate(predictions_val,
-                                                     labels_val, loss_val, hidden_layer_val)
+                                                     labels_val, loss_val, hidden_layer_val, FLAGS.hits)
         iteration_info_dict["examples_per_second"] = example_per_second
 
         iterinfo = utils.AddGlobalStepSummary(

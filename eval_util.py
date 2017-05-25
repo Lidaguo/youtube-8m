@@ -29,31 +29,34 @@ def flatten(l):
     return [item for sublist in l for item in sublist]
 
 
-def calculate_hit_at_one_embedding(embeddings):
+def calculate_hit_at_one_embedding(embeddings, k=1):
     """
     For each audio embedding looks for the closest frame embedding.
     If it is the right one, sums 1 to the hits at one. It could be done from frame to audio
     """
-
-    hits_at_one = 0
+    hits_at_k = 0
     # The embeddings are already normalized in the model
-    closest_embedding_distance = -1  # We compute the cosine distance. The greater the closer, up to 1
-    index_of_closer = -1
 
     embeddings_audio = embeddings[:, 0:128]
     embeddings_frames = embeddings[:, 128:2 * 128]
 
     for i in range(0, embeddings.shape[0]):
+        closest_embedding_distances = -numpy.ones(k)  # We compute the cosine distance. The greater the closer, up to 1
+        index_of_closers = -numpy.ones(k)
         embedding_audio = embeddings_audio[i, :]
         for j in range(0, embeddings.shape[0]):
             embedding_frame = embeddings_frames[j, :]
             distance = numpy.sum(numpy.multiply(embedding_frame, embedding_audio))
-            if distance > closest_embedding_distance:
-                closest_embedding_distance = distance
-                index_of_closer = j
-        if index_of_closer == i:
-            hits_at_one += 1
-    return hits_at_one
+            if distance > numpy.min(closest_embedding_distances):
+                index_substitute = numpy.argmin(closest_embedding_distances)
+                closest_embedding_distances[index_substitute] = distance
+                index_of_closers[index_substitute] = j
+        print(index_of_closers)
+        for i_closers in index_of_closers:
+            if i_closers == i:
+                hits_at_k += 1
+                break
+    return hits_at_k
 
 
 def calculate_hit_at_one(predictions, actuals):
@@ -192,7 +195,7 @@ class EvaluationMetrics(object):
         self.num_examples = 0
         self.sum_hit_at_one_embedding = 0.0
 
-    def accumulate(self, predictions, labels, loss, hidden_layer_val):
+    def accumulate(self, predictions, labels, loss, hidden_layer_val, hits=1):
         """Accumulate the metrics calculated locally for this mini-batch.
 
         Args:
@@ -212,7 +215,7 @@ class EvaluationMetrics(object):
         predictions = predictions[:, 0:4716]
         batch_size = labels.shape[0]
         mean_hit_at_one = calculate_hit_at_one(predictions, labels)
-        hits_at_one_embedding = calculate_hit_at_one_embedding(hidden_layer_val)
+        hits_at_one_embedding = calculate_hit_at_one_embedding(hidden_layer_val, hits)
         mean_perr = calculate_precision_at_equal_recall_rate(predictions, labels)
         mean_loss = numpy.mean(loss)
 

@@ -505,12 +505,10 @@ class Trainer(object):
                 predictions_val, labels_val)
             gap = eval_util.calculate_gap(predictions_val, labels_val)
 
-            error = numpy.mean(numpy.mean(numpy.abs(embeddings[1,0:128] - embeddings[2,128:2*128])))
-            logging.info("*******************")
             if FLAGS.model == "DidacModelEmbedding":
                 logging.info(is_neg_val[1])
             logging.info(numpy.sum(numpy.multiply(embeddings[1,0:128], embeddings[1,128:2*128])))
-            logging.info("%s Training step " + str(error) + "| Hit@1: " +
+            logging.info("%s Training step " + str(global_step_val) + "| Hit@1: " +
                         ("%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) + " GAP: " +
                         ("%.2f" % gap) + " Loss: " + str(loss_val), task_as_string(self.task))
 
