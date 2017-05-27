@@ -51,7 +51,6 @@ def calculate_hit_at_one_embedding(embeddings, k=1):
                 index_substitute = numpy.argmin(closest_embedding_distances)
                 closest_embedding_distances[index_substitute] = distance
                 index_of_closers[index_substitute] = j
-        print(index_of_closers)
         for i_closers in index_of_closers:
             if i_closers == i:
                 hits_at_k += 1

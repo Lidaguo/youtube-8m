@@ -88,12 +88,20 @@ class DidacModelEmbedding(models.BaseModel):
             first_frames, hid_2_frames, activation_fn=tf.nn.relu,
             weights_regularizer=slim.l2_regularizer(l2_penalty))
 
+        third_frames = slim.fully_connected(
+            second_frames, hid_2_frames, activation_fn=tf.nn.relu,
+            weights_regularizer=slim.l2_regularizer(l2_penalty))
+
+        third_audio = slim.fully_connected(
+            second_audio, hid_2_audio, activation_fn=tf.nn.relu,
+            weights_regularizer=slim.l2_regularizer(l2_penalty))
+
         embedding_audio = slim.fully_connected(
-            second_audio, hid, activation_fn=tf.nn.relu,
+            third_audio, hid, activation_fn=tf.nn.relu,
             weights_regularizer=slim.l2_regularizer(l2_penalty))
 
         embedding_frames = slim.fully_connected(
-            second_frames, hid, activation_fn=tf.nn.relu,
+            third_frames, hid, activation_fn=tf.nn.relu,
             weights_regularizer=slim.l2_regularizer(l2_penalty))
 
         embedding_frames = tf.nn.l2_normalize(embedding_frames, 1)

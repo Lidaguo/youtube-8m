@@ -497,21 +497,26 @@ class Trainer(object):
             self.max_steps_reached = True
 
           if self.is_master:
+            k = 10
             examples_per_second = labels_val.shape[0] / seconds_per_batch
             predictions_val = predictions_val[:,0:4716]
             hit_at_one = eval_util.calculate_hit_at_one(predictions_val,
                                                         labels_val)
+
             perr = eval_util.calculate_precision_at_equal_recall_rate(
                 predictions_val, labels_val)
             gap = eval_util.calculate_gap(predictions_val, labels_val)
 
             if FLAGS.model == "DidacModelEmbedding":
                 logging.info(is_neg_val[1])
-            logging.info(numpy.sum(numpy.multiply(embeddings[1,0:128], embeddings[1,128:2*128])))
-            logging.info("%s Training step " + str(global_step_val) + "| Hit@1: " +
-                        ("%.2f" % hit_at_one) + " PERR: " + ("%.2f" % perr) + " GAP: " +
+                hit_emb = eval_util.calculate_hit_at_one_embedding(embeddings, k)
+                logging.info(numpy.sum(numpy.multiply(embeddings[1,0:128], embeddings[1,128:2*128])))
+                logging.info("%s Training step " + str(global_step_val) + "| Hit@1: " +
+                        ("%.2f" % hit_at_one) + " HitEmbedding@" + ("%.0f: " % k) + ("%.2f" % hit_emb) + " GAP: " +
                         ("%.2f" % gap) + " Loss: " + str(loss_val), task_as_string(self.task))
-
+                sv.summary_writer.add_summary(
+                    utils.MakeSummary("model/Training_HitEmbedding@10", hit_emb),
+                    global_step_val)
             sv.summary_writer.add_summary(
                 utils.MakeSummary("model/Training_Hit@1", hit_at_one),
                 global_step_val)
