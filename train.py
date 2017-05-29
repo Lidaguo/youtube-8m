@@ -325,10 +325,12 @@ def build_graph(reader,
     if "loss" in result.keys():
       label_loss = result["loss"]
     else:
-      label_loss = label_loss_fn.calculate_loss(predictions, labels_batch, labels_audio=labels_audio_batch, embeddings=hidden_layer_activations,
+      label_loss, loss_classification, loss_cosine = label_loss_fn.calculate_loss(predictions, labels_batch, labels_audio=labels_audio_batch, embeddings=hidden_layer_activations,
                                                 vocab_size=reader.num_classes, reg_lambda = FLAGS.reg_lambda, margin = FLAGS.margin,
                                                 is_negative=is_negative)
     tf.summary.scalar("label_loss", label_loss)
+    tf.summary.scalar("loss_cosine", loss_cosine)
+    tf.summary.scalar("loss_classification", loss_classification)
 
     if "regularization_loss" in result.keys():
       reg_loss = result["regularization_loss"]
@@ -364,6 +366,8 @@ def build_graph(reader,
     tf.add_to_collection("global_step", global_step)
     tf.add_to_collection("is_negative", is_negative)
     tf.add_to_collection("loss", label_loss)
+    tf.add_to_collection("loss_cosine", loss_cosine)
+    tf.add_to_collection("loss_classification", loss_classification)
     tf.add_to_collection("predictions", predictions)
     tf.add_to_collection("input_batch_raw", model_input_raw)
     tf.add_to_collection("input_batch", model_input)
@@ -428,6 +432,8 @@ class Trainer(object):
 
         global_step = tf.get_collection("global_step")[0]
         loss = tf.get_collection("loss")[0]
+        loss_cosine = tf.get_collection("loss_cosine")[0]
+        loss_classification = tf.get_collection("loss_classification")[0]
         predictions = tf.get_collection("predictions")[0]
         labels = tf.get_collection("labels")[0]
         train_op = tf.get_collection("train_op")[0]
@@ -472,8 +478,9 @@ class Trainer(object):
                   [train_op, global_step, loss, predictions, labels, input_batch_raw, hidden_layer_activations])
               hidden_layer_val = np.mean(hidden_layer_val, axis=0) # Mean across all the batch examples
           elif FLAGS.model == "DidacModelEmbedding":
-              _, global_step_val, loss_val, predictions_val, labels_val, input_batch_raw_val, embeddings, resta_val, is_neg_val = sess.run(
-                  [train_op, global_step, loss, predictions, labels, input_batch_raw, hidden_layer_activations, resta, is_neg])
+              _, global_step_val, loss_val, predictions_val, labels_val, input_batch_raw_val, embeddings, resta_val, is_neg_val, loss_cosine_val, loss_classification_val\
+                  = sess.run(
+                  [train_op, global_step, loss, predictions, labels, input_batch_raw, hidden_layer_activations, resta, is_neg, loss_cosine, loss_classification])
           else:
               _, global_step_val, loss_val, predictions_val, labels_val, input_batch_raw_val= sess.run(
                   [train_op, global_step, loss, predictions, labels, input_batch_raw])
@@ -515,10 +522,16 @@ class Trainer(object):
                         ("%.2f" % hit_at_one) + " HitEmbedding@" + ("%.0f: " % k) + ("%.2f" % hit_emb) + " GAP: " +
                         ("%.2f" % gap) + " Loss: " + str(loss_val), task_as_string(self.task))
                 sv.summary_writer.add_summary(
-                    utils.MakeSummary("model/Training_HitEmbedding@10", hit_emb),
+                    utils.MakeSummary("model/TrainingEmbedding_Hit@10", hit_emb),
+                    global_step_val)
+                sv.summary_writer.add_summary(
+                    utils.MakeSummary("model/TrainingLossCosine", loss_cosine_val),
+                    global_step_val)
+                sv.summary_writer.add_summary(
+                    utils.MakeSummary("model/TrainingLossClassification", loss_classification_val),
                     global_step_val)
             sv.summary_writer.add_summary(
-                utils.MakeSummary("model/Training_Hit@1", hit_at_one),
+                utils.MakeSummary("model/TrainingClassification_Hit@1", hit_at_one),
                 global_step_val)
             sv.summary_writer.add_summary(
                 utils.MakeSummary("model/Training_Perr", perr), global_step_val)

@@ -38,7 +38,7 @@ def calculate_hit_at_one_embedding(embeddings, k=1):
     # The embeddings are already normalized in the model
 
     embeddings_audio = embeddings[:, 0:128]
-    embeddings_frames = embeddings[:, 128:2 * 128]
+    embeddings_frames = embeddings[:, 128:2*128]
 
     for i in range(0, embeddings.shape[0]):
         closest_embedding_distances = -numpy.ones(k)  # We compute the cosine distance. The greater the closer, up to 1

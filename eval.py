@@ -109,7 +109,28 @@ def get_input_evaluation_tensors(reader,
   logging.info("Using batch size of " + str(batch_size) + " for evaluation.")
   with tf.name_scope("eval_input"):
     if FLAGS.image_server:
-        files = ["/imatge/dsuris/documents/validationdata/yt8m_video_level/validate4r.tfrecord"]
+        files = ["/imatge/dsuris/documents/validationdata/yt8m_video_level/validate15.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validate3w.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validate4r.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validate8l.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validate9_.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validatea0.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validateAG.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validateay.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validateBE.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validateCH.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validateDH.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validateel.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validateet.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validateFk.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validateFp.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validateHW.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validateI4.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validateiB.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validatek4.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validateks.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validatelt.tfrecord",
+                 "/imatge/dsuris/documents/validationdata/yt8m_video_level/validatem1.tfrecord"]
     else:
         files = gfile.Glob(data_pattern)
 
@@ -215,13 +236,13 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
   Returns:
     The global_step used in the latest model.
   """
-
   global_step_val = -1
   with tf.Session() as sess:
     #if FLAGS.image_server:
     #    latest_checkpoint = "/work/dsuris/results/youtube-8m/video_level_didac_model/model.ckpt-1"
     #else:
     latest_checkpoint = tf.train.latest_checkpoint(FLAGS.train_dir)
+    print(latest_checkpoint)
     if latest_checkpoint:
       logging.info("Loading checkpoint for eval: " + latest_checkpoint)
       # Restores from checkpoint
@@ -239,7 +260,6 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
       return global_step_val
 
     sess.run([tf.local_variables_initializer()])
-
     # Start the queue runners.
     fetches = [video_id_batch, prediction_batch, label_batch, loss, summary_op, hidden_layer_batch]
     coord = tf.train.Coordinator()
@@ -264,6 +284,17 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
         emb_audio = hidden_layer_val[0, 128:2*128]
         logging.info("************")
         logging.info(np.sum(np.multiply(emb_frames,emb_audio)))
+        # From one random video and its image embedding, return the video_id of the closest audio embedding (besides itself)
+        index = np.random.randint(np.size(hidden_layer_val, 0))
+        index_semblant, correlacio_maxima, correlacio_original = get_closest_embedding(index, hidden_layer_val)
+        video_id_original = video_id_batch_val[index]
+        video_id_semblant = video_id_batch_val[index_semblant]
+        logging.info("Video ID original: ")
+        logging.info(video_id_original)
+        logging.info("Video ID semblant: ")
+        logging.info(video_id_semblant)
+        logging.info("Correlacio original: %.4f: ",correlacio_original)
+        logging.info("Correlacio semblant: %.4f: ",correlacio_maxima)
 
         seconds_per_batch = time.time() - batch_start_time
         example_per_second = labels_val.shape[0] / seconds_per_batch
@@ -306,6 +337,19 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
 
     return global_step_val, video_id_batch_val
 
+def get_closest_embedding(index, embeddings):
+    embeddings_audio = embeddings[:, 0:128]
+    embedding_frame = embeddings[index, 128:2*128]
+    correlacio_maxima = 0
+    index_semblant = -1
+    for i in range(0, embeddings_audio.shape[0]):
+        embedding_audio = embeddings_audio[i, :]
+        correlacio = np.sum(np.multiply(embedding_frame, embedding_audio))
+        if (correlacio > correlacio_maxima) & (i!=index):
+            index_semblant = i
+            correlacio_maxima = correlacio
+    correlacio_original = np.sum(np.multiply(embedding_frame, embeddings_audio[index, :]))
+    return index_semblant, correlacio_maxima, correlacio_original
 
 def evaluate():
   tf.set_random_seed(0)  # for reproducibility
