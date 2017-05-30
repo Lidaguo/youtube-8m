@@ -108,8 +108,7 @@ class CosineAndCrossEntropyLoss(BaseLoss):
 
             total_loss = cosine_loss_mean + reg_lambda * tf.sqrt(cross_entropy_loss)
 
-            return total_loss, cross_entropy_loss, cosine_loss_mean
-
+            return total_loss
 
 class CrossEntropyLoss(BaseLoss):
     """Calculate the cross entropy loss between the predictions and labels.
