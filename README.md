@@ -3,7 +3,7 @@
 ```sh
 BUCKET_NAME=gs://${USER}_yt8m_train_bucket
 ```
-##Training:
+## Training:
 The parameters to be modified are from the "base_learning_rate" to "start_new_model":
 * TRAIN_DIR: "yt8m_name_simulation" is the name of the simulation (and the folder where it will be saved). For 
 another simulation, give another meaningful name, depending on what you are trying to do.
@@ -46,11 +46,17 @@ JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug ml-engine j
 --label_loss="CosineAndCrossEntropyLoss" \
 ```
 
-##Evaluation (Validation):
+## Evaluation (Validation):
 Meaningful parameters:
 * JOB_TO_EVAL: it has to be the same as the TRAIN_DIR used in the training.
 * batch_size: number of features among which the closest embedding will be looked for.
 * hits: represents the "k" in Recall@k
+
+If you want to create new evaluation metrics, the files you have to change are "eval" and
+"eval_util". In the second one you can create a function such as "calculate_hit_at_k_embedding", to 
+evaluate whatever you want, having the embeddings of all the samples of the batch as input.
+Then you just have to see where the function "calculate_hit_at_k_embedding" is called, and do 
+the same for your new function.
 
 ```sh
 JOB_TO_EVAL=yt8m_name_simulation

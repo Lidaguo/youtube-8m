@@ -176,6 +176,7 @@ def get_input_data_tensors(reader,
     """
     logging.info("Using batch size of " + str(batch_size) + " for training.")
     with tf.name_scope("train_input"):
+        # Get the data from the files in the university server
         if FLAGS.image_server:
             files = ["/imatge/dsuris/documents/traindata/yt8m_video_level/train0_.tfrecord",
                      "/imatge/dsuris/documents/traindata/yt8m_video_level/train45.tfrecord",
@@ -457,15 +458,6 @@ class Trainer(object):
 
             try:
                 logging.info("%s: Entering training loop.", task_as_string(self.task))
-
-                # Mida de la embedding layer. Ha de quadrar amb la del model. Ho puc posar com a flag i/o passar parametre
-                size_embedding = 128
-                count_only_audio = 0
-                count_only_frames = 0
-                count_both = 0
-                only_audio_embedding = np.zeros(size_embedding)
-                only_frames_embedding = np.zeros(size_embedding)
-                both_embedding = np.zeros(size_embedding)
                 batch_counter = 0
                 while (not sv.should_stop()) and (not self.max_steps_reached):
                     batch_counter += 1
@@ -497,7 +489,7 @@ class Trainer(object):
                         if FLAGS.model == "EmbeddingModel" \
                                           "":
                             logging.info(is_neg_val[1])
-                            hit_emb = eval_util.calculate_hit_at_one_embedding(embeddings, k)
+                            hit_emb = eval_util.calculate_hit_at_k_embedding(embeddings, k)
                             logging.info(numpy.sum(numpy.multiply(embeddings[1, 0:128], embeddings[1, 128:2 * 128])))
                             logging.info("%s Training step " + str(global_step_val) + "| Hit@1: " +
                                          ("%.2f" % hit_at_one) + " HitEmbedding@" + ("%.0f: " % k) + (
