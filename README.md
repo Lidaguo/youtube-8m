@@ -80,6 +80,7 @@ Meaningful parameters:
 * JOB_TO_EVAL: it has to be the same as the TRAIN_DIR used in the training.
 * batch_size: number of features among which the closest embedding will be looked for.
 * hits: represents the "k" in Recall@k
+* max_batches: number of batches you want to evaluate (then the mean result is provided)
 
 If you want to create new evaluation metrics, the files you have to change are "eval" and
 "eval_util". In the second one you can create a function such as "calculate_hit_at_k_embedding", to 
@@ -98,6 +99,7 @@ submit training $JOB_NAME \
 -- --eval_data_pattern='gs://youtube8m-ml-us-east1/1/video_level/validate/validate*.tfrecord' \
 --hits=1 \
 --batch_size=256 \
+--max_batches=1 \
 --model=EmbeddingModel \
 --select_randomly=False \
 --feature_names="mean_rgb, mean_audio" \
@@ -116,6 +118,7 @@ srun --gres=gpu:1 --mem=5G python eval.py --eval_data_pattern='path_to_validatio
 --model=EmbeddingModel \
 --train_dir=$BUCKET_NAME/${JOB_TO_EVAL} \
 --run_once=True \
+--max_batches=100 \
 --select_randomly=False \
 --feature_names="mean_rgb, mean_audio" \
 --feature_sizes="1024, 128" \

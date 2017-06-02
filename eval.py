@@ -79,6 +79,8 @@ if __name__ == "__main__":
 
   flags.DEFINE_integer("hits", 5, "Hit@k -> hits is the k.")
 
+  flags.DEFINE_integer("max_batches", 3, "Maximum number of batches to evaluate")
+
 
 def find_class_by_name(name, modules):
   """Searches the provided modules for the named class and returns it."""
@@ -170,7 +172,7 @@ def build_graph(reader,
   """
 
   global_step = tf.Variable(0, trainable=False, name="global_step")
-  video_id_batch, model_input_raw, labels_batch, num_frames, is_negative, labels_audio_batch, _\
+  video_id_batch, model_input_raw, labels_batch, num_frames, is_negative, labels_audio_batch \
       = get_input_evaluation_tensors(  # pylint: disable=g-line-too-long
       reader,
       eval_data_pattern,
@@ -307,8 +309,11 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
             summary_scope="Eval")
         logging.info("examples_processed: %d | %s", examples_processed,
                      iterinfo)
+        # This is just to launch an OutOfRangeError when max_steps is reached, to finish the process
+        if examples_processed >= (FLAGS.max_batches * FLAGS.batch_size):
+            raise ValueError('Time to finish')
 
-    except tf.errors.OutOfRangeError as e:
+    except (tf.errors.OutOfRangeError, ValueError) as e:
       logging.info(
           "Done with batched inference. Now calculating global performance "
           "metrics.")
