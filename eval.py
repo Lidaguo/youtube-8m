@@ -211,7 +211,7 @@ def build_graph(reader,
   tf.add_to_collection("labels", tf.cast(labels_batch, tf.float32))
   tf.add_to_collection("summary_op", tf.summary.merge_all())
 
-  # Only for DidacModel & DidacModelEmbedding
+  # Only for DidacModel & EmbeddingModel
   if "hidden_layer_activations" in result.keys():
       hidden_layer_activations = result["hidden_layer_activations"]
       tf.add_to_collection("hidden_layer_activations", hidden_layer_activations)
@@ -238,9 +238,6 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
   """
   global_step_val = -1
   with tf.Session() as sess:
-    #if FLAGS.image_server:
-    #    latest_checkpoint = "/work/dsuris/results/youtube-8m/video_level_didac_model/model.ckpt-1"
-    #else:
     latest_checkpoint = tf.train.latest_checkpoint(FLAGS.train_dir)
     print(latest_checkpoint)
     if latest_checkpoint:
@@ -389,7 +386,7 @@ def evaluate():
     loss = tf.get_collection("loss")[0]
     summary_op = tf.get_collection("summary_op")[0]
 
-    if (FLAGS.model == "DidacModel") | (FLAGS.model == "DidacModelEmbedding"):
+    if (FLAGS.model == "DidacModel") | (FLAGS.model == "EmbeddingModel"):
         hidden_layer_batch = tf.get_collection("hidden_layer_activations")[0]
 
     saver = tf.train.Saver(tf.global_variables())

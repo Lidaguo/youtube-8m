@@ -159,7 +159,6 @@ class YT8MAggregatedFeatureReader(BaseReader):
         labels_audio = tf.sparse_to_indicator(features["labels"], self.num_classes)
 
         batch_size = tf.shape(features[name_frames])[0]
-        resta = tf.ones([batch_size,1])
 
         if self.negative_sampling:
 
@@ -180,7 +179,6 @@ class YT8MAggregatedFeatureReader(BaseReader):
             is_negative = tf.random_uniform([batch_size,1] , minval=0, maxval=1)
             is_negative = tf.less(is_negative, constant)
             features_audio_return, labels_audio = self.sample_negatively(features, labels, is_negative)
-            resta = tf.equal(labels_audio, labels)
             concatenated_features = tf.concat([ features_rgb, features_audio_return],1)
 
         else:
@@ -241,7 +239,7 @@ class YT8MAggregatedFeatureReader(BaseReader):
                 concatenated_features = tf.concat([features_rgb, features_audio], 1, name="concat_features")
 
         return features["video_id"], concatenated_features, labels, tf.ones(
-            [tf.shape(serialized_examples)[0]]), is_negative, labels_audio, resta
+            [tf.shape(serialized_examples)[0]]), is_negative, labels_audio
 
     def sample_negatively(self, features, labels, is_negative):
         features_audio = features["mean_audio"]

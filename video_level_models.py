@@ -48,7 +48,7 @@ class LogisticModel(models.BaseModel):
         return {"predictions": output}
 
 
-class DidacModelEmbedding(models.BaseModel):
+class EmbeddingModel(models.BaseModel):
     """Model from the paper with L2 regularization."""
 
     def create_model(self, model_input, vocab_size=4716, l2_penalty=1e-8, **unused_params):
@@ -122,58 +122,6 @@ class DidacModelEmbedding(models.BaseModel):
         predictions = tf.concat([predictions_audio, predictions_frames], 1)
 
         return {"predictions": predictions, "hidden_layer_activations": embeddings}
-
-
-class DidacModel(models.BaseModel):
-    """Model from the paper with L2 regularization."""
-
-    def create_model(self, model_input, vocab_size=4716, l2_penalty=1e-8, **unused_params):
-        """Creates a model.
-
-        Args:
-          model_input: 'batch' x 'num_features' matrix of input features.
-          vocab_size: The number of classes in the dataset.
-
-        Returns:
-          A dictionary with a tensor containing the probability predictions of the
-          model in the 'predictions' key. The dimensions of the tensor are
-          batch_size x num_classes."""
-
-        hid_1_audio = 128
-        hid_2_audio = 128
-        hid_1_frames = 1024
-        hid_2_frames = 1024
-        hid = 128
-
-        model_input_audio = model_input[:, 1024:1024 + 128]
-        model_input_frames = model_input[:, 0:1024]
-
-        first_audio = slim.fully_connected(
-            model_input_audio, hid_1_audio, activation_fn=tf.nn.relu,
-            weights_regularizer=slim.l2_regularizer(l2_penalty))
-
-        second_audio = slim.fully_connected(
-            first_audio, hid_2_audio, activation_fn=tf.nn.relu,
-            weights_regularizer=slim.l2_regularizer(l2_penalty))
-
-        first_frames = slim.fully_connected(
-            model_input_frames, hid_1_frames, activation_fn=tf.nn.relu,
-            weights_regularizer=slim.l2_regularizer(l2_penalty))
-
-        second_frames = slim.fully_connected(
-            first_frames, hid_2_frames, activation_fn=tf.nn.relu,
-            weights_regularizer=slim.l2_regularizer(l2_penalty))
-
-        hidden = slim.fully_connected(
-            tf.concat([second_frames, second_audio], 1), hid, activation_fn=tf.nn.relu,
-            weights_regularizer=slim.l2_regularizer(l2_penalty))
-
-        output = slim.fully_connected(
-            hidden, vocab_size, activation_fn=tf.nn.sigmoid,
-            weights_regularizer=slim.l2_regularizer(l2_penalty))
-
-        return {"predictions": output, "hidden_layer_activations": hidden}
-
 
 class MoeModel(models.BaseModel):
     """A softmax over a mixture of logistic models (with L2 regularization)."""

@@ -293,7 +293,7 @@ def build_graph(reader,
     tf.summary.scalar('learning_rate', learning_rate)
 
     optimizer = optimizer_class(learning_rate)
-    unused_video_id, model_input_raw, labels_batch, num_frames, is_negative, labels_audio_batch, resta = (
+    unused_video_id, model_input_raw, labels_batch, num_frames, is_negative, labels_audio_batch = (
         get_input_data_tensors(
             reader,
             train_data_pattern,
@@ -318,7 +318,7 @@ def build_graph(reader,
             tf.summary.histogram(variable.op.name, variable)
 
         predictions = result["predictions"]
-        # Only for DidacModel & DidacModelEmbedding
+        # Only for EmbeddingModel
         if "hidden_layer_activations" in result.keys():
             hidden_layer_activations = result["hidden_layer_activations"]
             tf.add_to_collection("hidden_layer_activations", hidden_layer_activations)
@@ -374,7 +374,6 @@ def build_graph(reader,
         tf.add_to_collection("num_frames", num_frames)
         tf.add_to_collection("labels", tf.cast(labels_batch, tf.float32))
         tf.add_to_collection("train_op", train_op)
-        tf.add_to_collection("resta", resta)
 
 
 class Trainer(object):
@@ -437,11 +436,10 @@ class Trainer(object):
                 labels = tf.get_collection("labels")[0]
                 train_op = tf.get_collection("train_op")[0]
                 input_batch_raw = tf.get_collection("input_batch_raw")[0]
-                resta = tf.get_collection("resta")[0]
                 is_neg = tf.get_collection("is_negative")[0]
                 init_op = tf.global_variables_initializer()
 
-                if (FLAGS.model == "DidacModel") | (FLAGS.model == "DidacModelEmbedding"):
+                if FLAGS.model == "EmbeddingModel":
                     hidden_layer_activations = tf.get_collection("hidden_layer_activations")[0]
 
         sv = tf.train.Supervisor(
@@ -472,31 +470,13 @@ class Trainer(object):
                 while (not sv.should_stop()) and (not self.max_steps_reached):
                     batch_counter += 1
                     batch_start_time = time.time()
-                    if (FLAGS.model == "DidacModel"):
-                        _, global_step_val, loss_val, predictions_val, labels_val, input_batch_raw_val, hidden_layer_val = sess.run(
+                    if FLAGS.model == "EmbeddingModel":
+                        _, global_step_val, loss_val, predictions_val, labels_val, input_batch_raw_val, embeddings, is_neg_val = sess.run(
                             [train_op, global_step, loss, predictions, labels, input_batch_raw,
-                             hidden_layer_activations])
-                        hidden_layer_val = np.mean(hidden_layer_val, axis=0)  # Mean across all the batch examples
-                    elif FLAGS.model == "DidacModelEmbedding":
-                        _, global_step_val, loss_val, predictions_val, labels_val, input_batch_raw_val, embeddings, resta_val, is_neg_val = sess.run(
-                            [train_op, global_step, loss, predictions, labels, input_batch_raw,
-                             hidden_layer_activations, resta, is_neg])
+                             hidden_layer_activations, is_neg])
                     else:
                         _, global_step_val, loss_val, predictions_val, labels_val, input_batch_raw_val = sess.run(
                             [train_op, global_step, loss, predictions, labels, input_batch_raw])
-                    if FLAGS.model == "DidacModel":
-                        # Only audio
-                        if ((input_batch_raw_val[0, 1] == 0) & (input_batch_raw_val[0, 1025] != 0)):
-                            only_audio_embedding += hidden_layer_val
-                            count_only_audio += 1
-                        # Both
-                        if ((input_batch_raw_val[0, 1] != 0) & (input_batch_raw_val[0, 1025] != 0)):
-                            both_embedding += hidden_layer_val
-                            count_both += 1
-                        # Only frames
-                        if ((input_batch_raw_val[0, 1] != 0) & (input_batch_raw_val[0, 1025] == 0)):
-                            only_frames_embedding += hidden_layer_val
-                            count_only_frames += 1
 
                     seconds_per_batch = time.time() - batch_start_time
 
@@ -514,7 +494,8 @@ class Trainer(object):
                             predictions_val, labels_val)
                         gap = eval_util.calculate_gap(predictions_val, labels_val)
 
-                        if FLAGS.model == "DidacModelEmbedding":
+                        if FLAGS.model == "EmbeddingModel" \
+                                          "":
                             logging.info(is_neg_val[1])
                             hit_emb = eval_util.calculate_hit_at_one_embedding(embeddings, k)
                             logging.info(numpy.sum(numpy.multiply(embeddings[1, 0:128], embeddings[1, 128:2 * 128])))
@@ -546,7 +527,7 @@ class Trainer(object):
                             self.export_model(global_step_val, sv.saver, sv.save_path, sess)
                             self.last_model_export_step = global_step_val
 
-                    if FLAGS.model == "DidacModelEmbedding":
+                    if FLAGS.model == "EmbeddingModel":
 
                         if FLAGS.image_server & (batch_counter == 9000):
                             pred_audio = np.asarray(predictions_val[1, 0:128])
@@ -566,25 +547,6 @@ class Trainer(object):
                 # Exporting the final model
                 if self.is_master:
                     self.export_model(global_step_val, sv.saver, sv.save_path, sess)
-
-                if FLAGS.model == "DidacModel":
-                    only_audio_embedding = np.asarray(only_audio_embedding) / np.asarray(count_only_audio)
-                    only_frames_embedding = np.asarray(only_frames_embedding) / np.asarray(count_only_frames)
-                    both_embedding = np.asarray(both_embedding) / np.asarray(count_both)
-
-                    # logging.info("Only Audio Embedding: " + str(only_audio_embedding))
-                    # logging.info("Only Frames Embedding: " + str(only_frames_embedding))
-                    # logging.info("Both Embedding: " + str(both_embedding))
-                    if FLAGS.image_server:
-                        # plt.stem(only_audio_embedding)
-                        # plt.savefig("only_audio_stem.png")
-                        # plt.cla()
-                        # plt.stem(only_frames_embedding)
-                        # plt.savefig("only_frames_stem.png")
-                        # plt.cla()
-                        # plt.stem(both_embedding)
-                        # plt.savefig("both_stem.png")
-                        logging.info("Imatges guardades")
 
 
             except tf.errors.OutOfRangeError:
