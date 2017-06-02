@@ -279,19 +279,18 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
 
         emb_frames = hidden_layer_val[0,0:128]
         emb_audio = hidden_layer_val[0, 128:2*128]
-        logging.info("************")
         logging.info(np.sum(np.multiply(emb_frames,emb_audio)))
         # From one random video and its image embedding, return the video_id of the closest audio embedding (besides itself)
         index = np.random.randint(np.size(hidden_layer_val, 0))
-        index_semblant, correlacio_maxima, correlacio_original = get_closest_embedding(index, hidden_layer_val)
+        index_similar, max_correlation, original_correlation = get_closest_embedding(index, hidden_layer_val)
         video_id_original = video_id_batch_val[index]
-        video_id_semblant = video_id_batch_val[index_semblant]
+        video_id_similar = video_id_batch_val[index_similar]
         logging.info("Video ID original: ")
         logging.info(video_id_original)
-        logging.info("Video ID semblant: ")
-        logging.info(video_id_semblant)
-        logging.info("Correlacio original: %.4f: ",correlacio_original)
-        logging.info("Correlacio semblant: %.4f: ",correlacio_maxima)
+        logging.info("Video ID closest: ")
+        logging.info(video_id_similar)
+        logging.info("Original cosine distance: %.4f: ",original_correlation)
+        logging.info("Closest cosine distance: %.4f: ",max_correlation)
 
         seconds_per_batch = time.time() - batch_start_time
         example_per_second = labels_val.shape[0] / seconds_per_batch
@@ -337,16 +336,16 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
 def get_closest_embedding(index, embeddings):
     embeddings_audio = embeddings[:, 0:128]
     embedding_frame = embeddings[index, 128:2*128]
-    correlacio_maxima = 0
-    index_semblant = -1
+    max_correlation = 0
+    index_similar = -1
     for i in range(0, embeddings_audio.shape[0]):
         embedding_audio = embeddings_audio[i, :]
         correlacio = np.sum(np.multiply(embedding_frame, embedding_audio))
-        if (correlacio > correlacio_maxima) & (i!=index):
-            index_semblant = i
-            correlacio_maxima = correlacio
-    correlacio_original = np.sum(np.multiply(embedding_frame, embeddings_audio[index, :]))
-    return index_semblant, correlacio_maxima, correlacio_original
+        if (correlacio > max_correlation) & (i!=index):
+            index_similar = i
+            max_correlation = correlacio
+    original_correlation = np.sum(np.multiply(embedding_frame, embeddings_audio[index, :]))
+    return index_similar, max_correlation, original_correlation
 
 def evaluate():
   tf.set_random_seed(0)  # for reproducibility

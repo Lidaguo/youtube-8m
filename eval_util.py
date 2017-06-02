@@ -29,10 +29,11 @@ def flatten(l):
     return [item for sublist in l for item in sublist]
 
 
-def calculate_hit_at_one_embedding(embeddings, k=1):
+def calculate_hit_at_k_embedding(embeddings, k=1):
     """
     For each audio embedding looks for the closest frame embedding.
-    If it is the right one, sums 1 to the hits at one. It could be done from frame to audio
+    If it is the right one, sums 1 to the hits at k. It could be done from frame to audio,
+    just changing the indices "0:128" for "128:2*128" and the other way around.
     """
     hits_at_k = 0
     # The embeddings are already normalized in the model
@@ -214,7 +215,7 @@ class EvaluationMetrics(object):
         predictions = predictions[:, 0:4716]
         batch_size = labels.shape[0]
         mean_hit_at_one = calculate_hit_at_one(predictions, labels)
-        hits_at_one_embedding = calculate_hit_at_one_embedding(hidden_layer_val, hits)
+        hits_at_one_embedding = calculate_hit_at_k_embedding(hidden_layer_val, hits)
         mean_perr = calculate_precision_at_equal_recall_rate(predictions, labels)
         mean_loss = numpy.mean(loss)
 
