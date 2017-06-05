@@ -26,10 +26,21 @@ _TOP_PREDICTIONS_IN_OUTPUT = 20
 
 class ModelExporter(object):
 
-  def __init__(self, frame_features, model, reader):
+  def __init__(self, frame_features, model, reader,
+            hid_1_audio ,
+            hid_2_audio,
+            hid_1_frames,
+            hid_2_frames,
+            embedding_size
+  ):
     self.frame_features = frame_features
     self.model = model
     self.reader = reader
+    self.hid_1_audio = hid_1_audio,
+    self.hid_2_audio = hid_2_audio,
+    self.hid_1_frames = hid_1_frames,
+    self.hid_2_frames = hid_2_frames,
+    self.hid = embedding_size,
 
     with tf.Graph().as_default() as graph:
       self.inputs, self.outputs = self.build_inputs_and_outputs()
@@ -98,6 +109,11 @@ class ModelExporter(object):
     with tf.name_scope("model"):
       result = self.model.create_model(
           model_input,
+          self.hid_1_audio[0],
+          self.hid_2_audio[0],
+          self.hid_1_frames[0],
+          self.hid_2_frames[0],
+          self.hid[0],
           num_frames=num_frames,
           vocab_size=self.reader.num_classes,
           labels=labels_batch,

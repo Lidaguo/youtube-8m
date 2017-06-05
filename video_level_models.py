@@ -51,12 +51,13 @@ class LogisticModel(models.BaseModel):
 class EmbeddingModel(models.BaseModel):
     """Model from the paper with L2 regularization."""
 
-    def create_model(self, model_input, vocab_size=4716, l2_penalty=1e-8,
+    def create_model(self, model_input,
                     hid_1_audio=128,
-                    hid_2_audio = 128,
-                    hid_1_frames = 1024,
-                    hid_2_frames = 1024,
-                    hid = 128,
+                    hid_2_audio=128,
+                    hid_1_frames=1024,
+                    hid_2_frames=1024,
+                    hid=128,
+                    vocab_size=4716, l2_penalty=1e-8,
                     **unused_params):
         """Creates a model.
 

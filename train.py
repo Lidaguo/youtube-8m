@@ -345,7 +345,8 @@ def build_graph(reader,
                                                       embeddings=hidden_layer_activations,
                                                       vocab_size=reader.num_classes, reg_lambda=FLAGS.reg_lambda,
                                                       margin=FLAGS.margin,
-                                                      is_negative=is_negative)
+                                                      is_negative=is_negative,
+                                                      shape_emb=FLAGS.embedding_size)
         tf.summary.scalar("label_loss", label_loss)
 
         if "regularization_loss" in result.keys():
@@ -503,7 +504,7 @@ class Trainer(object):
                                           "":
                             logging.info(is_neg_val[1])
                             hit_emb = eval_util.calculate_hit_at_k_embedding(embeddings, k)
-                            logging.info(numpy.sum(numpy.multiply(embeddings[1, 0:128], embeddings[1, 128:2 * 128])))
+                            logging.info(numpy.sum(numpy.multiply(embeddings[1, 0:FLAGS.embedding_size], embeddings[1, FLAGS.embedding_size:2 * FLAGS.embedding_size])))
                             logging.info("%s Training step " + str(global_step_val) + "| Hit@1: " +
                                          ("%.2f" % hit_at_one) + " HitEmbedding@" + ("%.0f: " % k) + (
                                          "%.2f" % hit_emb) + " GAP: " +
@@ -535,8 +536,8 @@ class Trainer(object):
                     if FLAGS.model == "EmbeddingModel":
 
                         if FLAGS.image_server & (batch_counter == 9000):
-                            pred_audio = np.asarray(predictions_val[1, 0:128])
-                            pred_frames = np.asarray(predictions_val[1, 128:2 * 128])
+                            pred_audio = np.asarray(predictions_val[1, 0:FLAGS.embedding_size])
+                            pred_frames = np.asarray(predictions_val[1, FLAGS.embedding_size:2 * FLAGS.embedding_size])
                             # plt.bar(range(1, 129), pred_audio / np.linalg.norm(pred_audio))
                             # plt.savefig("embedding_audio2.png")
                             # plt.cla()
@@ -754,7 +755,13 @@ def main(unused_argv):
         model_exporter = export_model.ModelExporter(
             frame_features=FLAGS.frame_features,
             model=model,
-            reader=reader)
+            reader=reader,
+            hid_1_audio=FLAGS.hid_1_audio,
+            hid_2_audio=FLAGS.hid_2_audio,
+            hid_1_frames=FLAGS.hid_1_frames,
+            hid_2_frames=FLAGS.hid_2_frames,
+            embedding_size=FLAGS.embedding_size
+        )
 
         Trainer(cluster, task, FLAGS.train_dir, model, reader, model_exporter,
                 FLAGS.log_device_placement, FLAGS.max_steps,

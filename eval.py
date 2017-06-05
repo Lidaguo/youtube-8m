@@ -291,8 +291,8 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
         video_id_batch_val, predictions_val, labels_val, loss_val, summary_val, hidden_layer_val = sess.run(
             fetches)
 
-        emb_frames = hidden_layer_val[0,0:128]
-        emb_audio = hidden_layer_val[0, 128:2*128]
+        emb_frames = hidden_layer_val[0,0:FLAGS.embedding_size]
+        emb_audio = hidden_layer_val[0, FLAGS.embedding_size:2*FLAGS.embedding_size]
         logging.info(np.sum(np.multiply(emb_frames,emb_audio)))
         # From one random video and its image embedding, return the video_id of the closest audio embedding (besides itself)
         index = np.random.randint(np.size(hidden_layer_val, 0))
@@ -351,8 +351,8 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
     return global_step_val, video_id_batch_val
 
 def get_closest_embedding(index, embeddings):
-    embeddings_audio = embeddings[:, 0:128]
-    embedding_frame = embeddings[index, 128:2*128]
+    embeddings_audio = embeddings[:, 0:FLAGS.embedding_size]
+    embedding_frame = embeddings[index, FLAGS.embedding_size:2*FLAGS.embedding_size]
     max_correlation = 0
     index_similar = -1
     for i in range(0, embeddings_audio.shape[0]):
