@@ -51,7 +51,13 @@ class LogisticModel(models.BaseModel):
 class EmbeddingModel(models.BaseModel):
     """Model from the paper with L2 regularization."""
 
-    def create_model(self, model_input, vocab_size=4716, l2_penalty=1e-8, **unused_params):
+    def create_model(self, model_input, vocab_size=4716, l2_penalty=1e-8,
+                    hid_1_audio=128,
+                    hid_2_audio = 128,
+                    hid_1_frames = 1024,
+                    hid_2_frames = 1024,
+                    hid = 128,
+                    **unused_params):
         """Creates a model.
 
         Args:
@@ -62,12 +68,6 @@ class EmbeddingModel(models.BaseModel):
           A dictionary with a tensor containing the probability predictions of the
           model in the 'predictions' key. The dimensions of the tensor are
           batch_size x num_classes."""
-
-        hid_1_audio = 128
-        hid_2_audio = 128
-        hid_1_frames = 1024
-        hid_2_frames = 1024
-        hid = 128
 
         model_input_audio = model_input[:, 1024:1024 + 128]
         model_input_frames = model_input[:, 0:1024]

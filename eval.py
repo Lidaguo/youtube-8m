@@ -81,6 +81,13 @@ if __name__ == "__main__":
 
   flags.DEFINE_integer("max_batches", 3, "Maximum number of batches to evaluate")
 
+  # Model parameters
+  flags.DEFINE_integer("hid_1_audio", 128, "Hidden layer 1 audio")
+  flags.DEFINE_integer("hid_2_audio", 128, "Hidden layer 2 audio")
+  flags.DEFINE_integer("hid_1_frames", 1024, "Hidden layer 1 frames")
+  flags.DEFINE_integer("hid_2_frames", 1024, "Hidden layer 2 frames")
+  flags.DEFINE_integer("embedding_size", 128, "Embedding size")
+
 
 def find_class_by_name(name, modules):
   """Searches the provided modules for the named class and returns it."""
@@ -189,6 +196,11 @@ def build_graph(reader,
     result = model.create_model(model_input,
                                 num_frames=num_frames,
                                 vocab_size=reader.num_classes,
+                                hid_1_audio=FLAGS.hid_1_audio,
+                                hid_2_audio=FLAGS.hid_2_audio,
+                                hid_1_frames=FLAGS.hid_1_frames,
+                                hid_2_frames=FLAGS.hid_2_frames,
+                                hid=FLAGS.embedding_size,
                                 labels=labels_batch,
                                 is_training=False)
     predictions = result["predictions"]

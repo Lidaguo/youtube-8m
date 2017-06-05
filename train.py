@@ -121,6 +121,13 @@ if __name__ == "__main__":
     flags.DEFINE_float("percentage_negative", 0.8,
                        "Percentage of negative samples")
 
+    # Model parameters
+    flags.DEFINE_integer("hid_1_audio", 128, "Hidden layer 1 audio")
+    flags.DEFINE_integer("hid_2_audio", 128, "Hidden layer 2 audio")
+    flags.DEFINE_integer("hid_1_frames", 1024, "Hidden layer 1 frames")
+    flags.DEFINE_integer("hid_2_frames", 1024, "Hidden layer 2 frames")
+    flags.DEFINE_integer("embedding_size", 128, "Embedding size")
+
 
 def validate_class_name(flag_value, category, modules, expected_superclass):
     """Checks that the given string matches a class of the expected type.
@@ -313,7 +320,13 @@ def build_graph(reader,
         result = model.create_model(
             model_input,
             num_frames=num_frames,
-            vocab_size=reader.num_classes)
+            vocab_size=reader.num_classes,
+            hid_1_audio=FLAGS.hid_1_audio,
+            hid_2_audio=FLAGS.hid_2_audio,
+            hid_1_frames=FLAGS.hid_1_frames,
+            hid_2_frames=FLAGS.hid_2_frames,
+            hid=FLAGS.embedding_size,
+        )
 
         for variable in slim.get_model_variables():
             tf.summary.histogram(variable.op.name, variable)
