@@ -98,7 +98,7 @@ class EmbeddingModel(models.BaseModel):
 
         embedding_audio = slim.fully_connected(
             third_audio, hid, activation_fn=tf.nn.relu,
-            weights_regularizer=slim.l2_regularizer(l2_penalty))
+            weights_regularizer=slim.l2_regularizer(l2_penalty), name='embedding_audio')
 
         embedding_frames = slim.fully_connected(
             third_frames, hid, activation_fn=tf.nn.relu,
