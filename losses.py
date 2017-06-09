@@ -42,10 +42,10 @@ class CosineLoss(BaseLoss):
     """Calculate the cosine distance loss between the predictions and labels.
     """
 
-    def calculate_loss(self, embedding, labels, **unused_params):
+    def calculate_loss(self, embedding, labels, shape_emb = 128, **unused_params):
         with tf.name_scope("loss_cosine"):
-            embedding_audio = embedding[:, 0:128]
-            embedding_frames = embedding[:, 128:2 * 128]
+            embedding_audio = embedding[:, 0:shape_emb]
+            embedding_frames = embedding[:, shape_emb:2 * shape_emb]
             # We do the normalization in the model
             # embedding_frames = tf.nn.l2_normalize(embedding_frames, 1)
             # embedding_audio = tf.nn.l2_normalize(embedding_audio, 1)
@@ -57,15 +57,15 @@ class CosineAndCrossEntropyLoss(BaseLoss):
     """
 
     def calculate_loss(self, predictions, labels, labels_audio, embeddings=[], vocab_size=4716, reg_lambda=0.00,
-                       margin=0.3,is_negative=[], **unused_params):
+                       margin=0.3,is_negative=[], shape_emb = 128, **unused_params):
         with tf.name_scope("loss_cosine_entropy"):
             is_negative_float = tf.to_float(is_negative)
 
             # We do the normalization in the model
             # embedding_frames = tf.nn.l2_normalize(embedding_frames, 1)
             # embedding_audio = tf.nn.l2_normalize(embedding_audio, 1)
-            embedding_audio = embeddings[:, 0:128]
-            embedding_frames = embeddings[:, 128:2 * 128]
+            embedding_audio = embeddings[:, 0:shape_emb]
+            embedding_frames = embeddings[:, shape_emb:2 * shape_emb]
 
             predictions_audio = predictions[:, 0:vocab_size]
             predictions_frames = predictions[:, vocab_size:2 * vocab_size]

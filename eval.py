@@ -81,6 +81,13 @@ if __name__ == "__main__":
 
   flags.DEFINE_integer("max_batches", 3, "Maximum number of batches to evaluate")
 
+  # Model parameters
+  flags.DEFINE_integer("hid_1_audio", 128, "Hidden layer 1 audio")
+  flags.DEFINE_integer("hid_2_audio", 128, "Hidden layer 2 audio")
+  flags.DEFINE_integer("hid_1_frames", 1024, "Hidden layer 1 frames")
+  flags.DEFINE_integer("hid_2_frames", 1024, "Hidden layer 2 frames")
+  flags.DEFINE_integer("embedding_size", 128, "Embedding size")
+
 
 def find_class_by_name(name, modules):
   """Searches the provided modules for the named class and returns it."""
@@ -189,6 +196,11 @@ def build_graph(reader,
     result = model.create_model(model_input,
                                 num_frames=num_frames,
                                 vocab_size=reader.num_classes,
+                                hid_1_audio=FLAGS.hid_1_audio,
+                                hid_2_audio=FLAGS.hid_2_audio,
+                                hid_1_frames=FLAGS.hid_1_frames,
+                                hid_2_frames=FLAGS.hid_2_frames,
+                                hid=FLAGS.embedding_size,
                                 labels=labels_batch,
                                 is_training=False)
     predictions = result["predictions"]
@@ -279,18 +291,22 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
         video_id_batch_val, predictions_val, labels_val, loss_val, summary_val, hidden_layer_val = sess.run(
             fetches)
 
-        emb_frames = hidden_layer_val[0,0:128]
-        emb_audio = hidden_layer_val[0, 128:2*128]
+        emb_frames = hidden_layer_val[0,0:FLAGS.embedding_size]
+        emb_audio = hidden_layer_val[0, FLAGS.embedding_size:2*FLAGS.embedding_size]
         logging.info(np.sum(np.multiply(emb_frames,emb_audio)))
         # From one random video and its image embedding, return the video_id of the closest audio embedding (besides itself)
         index = np.random.randint(np.size(hidden_layer_val, 0))
         index_similar, max_correlation, original_correlation = get_closest_embedding(index, hidden_layer_val)
         video_id_original = video_id_batch_val[index]
         video_id_similar = video_id_batch_val[index_similar]
-        logging.info("Video ID original: ")
+        labels_original = np.where(labels_val[index] == 1)
+        labels_similar =  np.where(labels_val[index_similar] == 1)
+        logging.info("Original video ID and labels: ")
         logging.info(video_id_original)
-        logging.info("Video ID closest: ")
+        logging.info(labels_original)
+        logging.info("Closest video ID and labels: ")
         logging.info(video_id_similar)
+        logging.info(labels_similar)
         logging.info("Original cosine distance: %.4f: ",original_correlation)
         logging.info("Closest cosine distance: %.4f: ",max_correlation)
 
@@ -339,8 +355,8 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
     return global_step_val, video_id_batch_val
 
 def get_closest_embedding(index, embeddings):
-    embeddings_audio = embeddings[:, 0:128]
-    embedding_frame = embeddings[index, 128:2*128]
+    embeddings_audio = embeddings[:, 0:FLAGS.embedding_size]
+    embedding_frame = embeddings[index, FLAGS.embedding_size:2*FLAGS.embedding_size]
     max_correlation = 0
     index_similar = -1
     for i in range(0, embeddings_audio.shape[0]):
@@ -408,7 +424,7 @@ def evaluate():
                                              saver, summary_writer, evl_metrics,
                                              last_global_step_val, hidden_layer_batch)
       video_id_batch_array = np.asarray(video_id_batch_val)
-      logging.info("Mida video_id: " + str(video_id_batch_array.shape))
+      logging.info("Size video_id: " + str(video_id_batch_array.shape))
       logging.info(video_id_batch_val[0])
       if FLAGS.run_once:
         break

@@ -51,7 +51,14 @@ class LogisticModel(models.BaseModel):
 class EmbeddingModel(models.BaseModel):
     """Model from the paper with L2 regularization."""
 
-    def create_model(self, model_input, vocab_size=4716, l2_penalty=1e-8, **unused_params):
+    def create_model(self, model_input,
+                    hid_1_audio=128,
+                    hid_2_audio=128,
+                    hid_1_frames=1024,
+                    hid_2_frames=1024,
+                    hid=128,
+                    vocab_size=4716, l2_penalty=1e-8,
+                    **unused_params):
         """Creates a model.
 
         Args:
@@ -63,12 +70,6 @@ class EmbeddingModel(models.BaseModel):
           model in the 'predictions' key. The dimensions of the tensor are
           batch_size x num_classes."""
 
-        hid_1_audio = 128
-        hid_2_audio = 128
-        hid_1_frames = 1024
-        hid_2_frames = 1024
-        hid = 128
-
         model_input_audio = model_input[:, 1024:1024 + 128]
         model_input_frames = model_input[:, 0:1024]
 
@@ -77,7 +78,7 @@ class EmbeddingModel(models.BaseModel):
             weights_regularizer=slim.l2_regularizer(l2_penalty))
 
         second_audio = slim.fully_connected(
-            first_audio, hid_2_audio, activation_fn=tf.nn.relu,
+            first_audio, hid_1_audio, activation_fn=tf.nn.relu,
             weights_regularizer=slim.l2_regularizer(l2_penalty))
 
         first_frames = slim.fully_connected(
@@ -85,7 +86,7 @@ class EmbeddingModel(models.BaseModel):
             weights_regularizer=slim.l2_regularizer(l2_penalty))
 
         second_frames = slim.fully_connected(
-            first_frames, hid_2_frames, activation_fn=tf.nn.relu,
+            first_frames, hid_1_frames, activation_fn=tf.nn.relu,
             weights_regularizer=slim.l2_regularizer(l2_penalty))
 
         third_frames = slim.fully_connected(
@@ -96,12 +97,20 @@ class EmbeddingModel(models.BaseModel):
             second_audio, hid_2_audio, activation_fn=tf.nn.relu,
             weights_regularizer=slim.l2_regularizer(l2_penalty))
 
+        fourth_frames = slim.fully_connected(
+            third_frames, hid_2_frames, activation_fn=tf.nn.relu,
+            weights_regularizer=slim.l2_regularizer(l2_penalty))
+
+        fourth_audio = slim.fully_connected(
+            third_audio, hid_2_audio, activation_fn=tf.nn.relu,
+            weights_regularizer=slim.l2_regularizer(l2_penalty))
+
         embedding_audio = slim.fully_connected(
-            third_audio, hid, activation_fn=tf.nn.relu,
+            fourth_audio, hid, activation_fn=tf.nn.relu,
             weights_regularizer=slim.l2_regularizer(l2_penalty))
 
         embedding_frames = slim.fully_connected(
-            third_frames, hid, activation_fn=tf.nn.relu,
+            fourth_frames, hid, activation_fn=tf.nn.relu,
             weights_regularizer=slim.l2_regularizer(l2_penalty))
 
         embedding_frames = tf.nn.l2_normalize(embedding_frames, 1)
