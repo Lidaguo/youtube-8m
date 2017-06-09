@@ -299,10 +299,14 @@ def evaluation_loop(video_id_batch, prediction_batch, label_batch, loss,
         index_similar, max_correlation, original_correlation = get_closest_embedding(index, hidden_layer_val)
         video_id_original = video_id_batch_val[index]
         video_id_similar = video_id_batch_val[index_similar]
-        logging.info("Video ID original: ")
+        labels_original = np.where(labels_val[index] == 1)
+        labels_similar =  np.where(labels_val[index_similar] == 1)
+        logging.info("Original video ID and labels: ")
         logging.info(video_id_original)
-        logging.info("Video ID closest: ")
+        logging.info(labels_original)
+        logging.info("Closest video ID and labels: ")
         logging.info(video_id_similar)
+        logging.info(labels_similar)
         logging.info("Original cosine distance: %.4f: ",original_correlation)
         logging.info("Closest cosine distance: %.4f: ",max_correlation)
 
@@ -420,7 +424,7 @@ def evaluate():
                                              saver, summary_writer, evl_metrics,
                                              last_global_step_val, hidden_layer_batch)
       video_id_batch_array = np.asarray(video_id_batch_val)
-      logging.info("Mida video_id: " + str(video_id_batch_array.shape))
+      logging.info("Size video_id: " + str(video_id_batch_array.shape))
       logging.info(video_id_batch_val[0])
       if FLAGS.run_once:
         break

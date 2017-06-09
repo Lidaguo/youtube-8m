@@ -44,6 +44,11 @@ JOB_NAME=yt8m_train_$(date +%Y%m%d_%H%M%S); gcloud --verbosity=debug ml-engine j
 --num_readers=8 \
 --image_server=False \
 --label_loss="CosineAndCrossEntropyLoss" \
+--hid_1_audio=450 \
+--hid_2_audio=250 \
+--hid_1_frames=2000 \
+--hid_2_frames=700 \
+--embedding_size=250 
 ```
 
 I also introduce the commands I use to execute it on our server, which are very similar. The image_server flag 
@@ -53,7 +58,7 @@ you should put it to False:
 ```sh
 TRAIN_DIR=yt8m_name_simulation
 srun --gres=gpu:1 --mem=2G python train.py --train_data_pattern='path_to_training_data/train*.tfrecord' \
---model=DidacModelEmbedding \
+--model=EmbeddingModel \
 --select_randomly=False \
 --feature_names="mean_rgb, mean_audio" \
 --feature_sizes="1024, 128" \
@@ -73,6 +78,11 @@ srun --gres=gpu:1 --mem=2G python train.py --train_data_pattern='path_to_trainin
 --export_model_steps=100 \
 --learning_rate_decay_examples=1000 \
 --learning_rate_decay=0.7
+--hid_1_audio=450 \
+--hid_2_audio=250 \
+--hid_1_frames=2000 \
+--hid_2_frames=700 \
+--embedding_size=250 
 ```
 
 ## Evaluation (Validation):
@@ -108,6 +118,11 @@ submit training $JOB_NAME \
 --train_dir=$BUCKET_NAME/${JOB_TO_EVAL} \
 --run_once=True \
 --board_dir=$BUCKET_NAME/${BOARD} 
+--hid_1_audio=450 \
+--hid_2_audio=250 \
+--hid_1_frames=2000 \
+--hid_2_frames=700 \
+--embedding_size=250 
 ```
 
 And this is the command used for running it on our server:
@@ -116,9 +131,9 @@ And this is the command used for running it on our server:
 JOB_TO_EVAL=yt8m_name_simulation
 srun --gres=gpu:1 --mem=5G python eval.py --eval_data_pattern='path_to_validation_data/validate*.tfrecord' \
 --model=EmbeddingModel \
---train_dir=$BUCKET_NAME/${JOB_TO_EVAL} \
+--train_dir=$MODEL_DIR/${JOB_TO_EVAL} \
 --run_once=True \
---max_batches=100 \
+--max_batches=1 \
 --select_randomly=False \
 --feature_names="mean_rgb, mean_audio" \
 --feature_sizes="1024, 128" \
@@ -126,4 +141,9 @@ srun --gres=gpu:1 --mem=5G python eval.py --eval_data_pattern='path_to_validatio
 --image_server=True \
 --label_loss="CosineAndCrossEntropyLoss" \
 --hits=10
+--hid_1_audio=450 \
+--hid_2_audio=250 \
+--hid_1_frames=2000 \
+--hid_2_frames=700 \
+--embedding_size=250 
 ```
